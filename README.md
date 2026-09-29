@@ -59,7 +59,22 @@
 
 ### 配置模型
 
-添加连接，填写 API 地址、API Key、协议和模型 ID，选择支持图片输入的模型并设为默认。
+以 **DeepSeek 开放平台**为例，使用支持图片输入的 [deepseek-flash](https://api-docs.deepseek.com/guides/vision/)：
+
+1. 登录 [DeepSeek 开放平台](https://platform.deepseek.com/api_keys)，创建并复制 API Key，确认账户有可用余额。
+2. 安卓进入“设置 → 模型与 API → 添加连接”，可选“使用供应商预设 → DeepSeek”；电脑端进入“设置 → 模型 → 添加连接”。按下表填写，并添加模型。
+
+| 设置项 | 填写内容 |
+| --- | --- |
+| 连接名称 | `DeepSeek` |
+| 供应商 | `deepseek`（安卓使用 DeepSeek 预设） |
+| API 协议 | 安卓选 `OpenAI Chat Completions`；电脑端选 `openai-completions` |
+| API 地址 | `https://api.deepseek.com` |
+| API Key / API 密钥 | 开放平台创建的密钥原文 |
+| 模型 ID | `deepseek-flash` |
+
+3. 安卓手动添加模型后点击“完成 → 保存连接”；电脑端勾选“视觉”，点击“保存设置”。
+4. 安卓重新打开已保存的连接，点击“发送测试请求”；电脑端点击模型旁的“测试”。通过后，安卓在“新会话默认模型”中选择该模型，电脑端点击“设为默认”并保存。新建对话，发送“看看手机当前页面”验证。
 
 任务文字和必要截图会发送给所选服务，费用由服务商收取。勿公开密钥或私人截图。断线后先检查手机状态再继续；停止不能撤回已发出的操作。
 
