@@ -5,8 +5,6 @@
 - **App 不设限**：不设应用白名单，想让 AI 操作哪个 App，就直接告诉它。
 - **安卓后台执行**：AI 在独立任务屏中操作，你可以继续使用手机，随时查看进度或接管。
 
-具体操作效果取决于模型能力、系统权限与 App 兼容性。
-
 <table>
   <tr><th>电脑端</th><th>Android 端</th></tr>
   <tr>
@@ -14,8 +12,6 @@
     <td width="28%"><img src="docs/images/android.png" alt="Android 端：在手机上发起任务并查看回复"></td>
   </tr>
 </table>
-
-界面示例使用演示数据。
 
 ## 下载
 
@@ -25,8 +21,6 @@
 | --- | --- |
 | Android 11+、arm64 | `BigBirdUI-Android-arm64-debug.apk` |
 | Windows x64 | `BigBirdUI-Windows-x64.zip` |
-
-当前为预览版：APK 使用调试签名，Windows 程序未做代码签名。
 
 ## 使用教程
 
