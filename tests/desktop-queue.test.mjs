@@ -1,4 +1,4 @@
-import test from 'node:test';
+import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -7,6 +7,8 @@ import { restoreState } from '../desktop/state.mjs';
 import { PiProcess } from '../desktop/rpc.mjs';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
+
+before(async () => { await mkdir(path.resolve('runs'), { recursive: true }); });
 
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
 const turn = () => new Promise(resolve => setImmediate(resolve));

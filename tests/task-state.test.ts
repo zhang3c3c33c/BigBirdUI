@@ -1,5 +1,5 @@
 import { createAssistantMessageEventStream } from '@earendil-works/pi-ai';
-import test from 'node:test';
+import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -10,6 +10,8 @@ import desktopExtension from '../pi/phone-extension.ts';
 import androidExtension from '../pi/android/extension.ts';
 import { PhoneBridge, ROOT } from '../pi/bridge.ts';
 import { AndroidPhoneBridge } from '../pi/android/bridge.ts';
+
+before(async () => { await mkdir(join(ROOT, 'runs'), { recursive: true }); });
 
 const initial: TaskState = {
   version: 1, id: 'book-one', goal: '查找附近可预约的餐厅', status: 'active', summary: '正在读取列表',

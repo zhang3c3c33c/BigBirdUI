@@ -1,6 +1,6 @@
 # 首次公开发布清单
 
-当前阶段：首次源码公开。目标仓库为 [zhang3c3c33c/BigBirdUI](https://github.com/zhang3c3c33c/BigBirdUI)；维护者已确认 MIT 许可证，版权署名为 zhang3c3c33c。安装包发布另行验收。
+当前阶段：源码已公开。仓库为 [zhang3c3c33c/BigBirdUI](https://github.com/zhang3c3c33c/BigBirdUI)；维护者已确认 MIT 许可证，版权署名为 zhang3c3c33c。安装包发布另行验收。
 
 ## 仓库内容
 
@@ -21,6 +21,8 @@
 - [ ] 核对第三方组件与品牌资源的再分发条件；完成 APK / ZIP 的完整许可清单。
 
 ## 构建与发布验证
+
+源码已推送到 `main`；[GitHub CI](https://github.com/zhang3c3c33c/BigBirdUI/actions/workflows/ci.yml)在独立 Windows 环境验证源码安装和无设备测试。首次运行发现测试依赖本机已有的 `runs/` 目录，已改为测试自行创建目录。
 
 - [ ] 在干净检出目录按 CONTRIBUTING 和对应应用构建指南重装依赖，执行 CONTRIBUTING 中的无设备检查。
 - [ ] 推送后确认 GitHub Actions 首次实际运行通过；本地通过不能代替托管环境验证。

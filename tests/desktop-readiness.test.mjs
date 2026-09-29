@@ -1,6 +1,6 @@
-import test from 'node:test';
+import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { DesktopHost } from '../desktop/host.mjs';
 import { restoreState, bindSubmission, deviceIdentity, atomicJson } from '../desktop/state.mjs';
@@ -8,6 +8,8 @@ import { discoverDevices } from '../desktop/devices.mjs';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
 import { createServer } from 'node:http';
+
+before(async () => { await mkdir(path.resolve('runs'), { recursive: true }); });
 
 test('iPhone cleanup receives authenticated release before closing MCP stdin and never acknowledges a missing receipt', async t => {
   const host = fixture(t); host.settings.devicePlatform = 'ios'; host.hostToken = 'fixture-cleanup-token';

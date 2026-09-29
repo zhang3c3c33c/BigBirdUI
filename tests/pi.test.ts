@@ -1,4 +1,4 @@
-import test from 'node:test';
+import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -9,6 +9,8 @@ import { PhoneBridge, ROOT, convertContent } from '../pi/bridge.ts';
 import { Check } from 'typebox/value';
 import extension, { PhoneSchema } from '../pi/phone-extension.ts';
 import { desktopPhoneSchema } from '../pi/phone-contract.ts';
+
+before(async () => { await mkdir(join(ROOT, 'runs'), { recursive: true }); });
 
 test('iPhone schema exposes only declared operations and main-screen semantics', () => {
   const schema = desktopPhoneSchema({ devicePlatform: 'ios', phoneOperations: ['查看', '按键', '输入内容'], phoneKeys: ['主页', '回车'] });

@@ -99,6 +99,13 @@ iPhone 使用真实主屏，当前输入操作要求正向竖屏，不支持 And
 
 ## 从源码构建
 
+先取得源码，后续命令均在仓库根目录执行：
+
+```powershell
+git clone https://github.com/zhang3c3c33c/BigBirdUI.git
+cd BigBirdUI
+```
+
 Windows 桌面端需要 Node 24.15.0、Python 3.12.14、Android 构建工具链及 scrcpy 资源。完成[桌面构建步骤](docs/guides/DESKTOP.md)后，`npm run desktop:package` 生成 `.desktop/releases/` 下的便携包。此路径是本机构建产物，不是下载地址。
 
 Android 需要 JDK 17、Android SDK 36、NDK 28.2.13676358、CMake 3.22.1 及根目录 npm 依赖。执行 `npm run android:build`，调试 APK 位于 `android/app/build/outputs/apk/debug/app-debug.apk`。安装后启动 Shizuku、授权并配置模型。详见 [Android 实施说明](docs/development/ANDROID-IMPLEMENTATION.md)。
