@@ -209,13 +209,13 @@ class SettingsActivity : AppCompatActivity() {
         return fields
     }
     private fun label(form: LinearLayout, title: String) { form.addView(TextView(this).apply { text = title; textSize = 13f; setTextColor(UiStyle.muted); setPadding(0, dp(16), 0, dp(6)) }) }
-    private fun field(form: LinearLayout, title: String, value: String, password: Boolean = false, number: Boolean = false, update: (String) -> Unit): EditText {
+    private fun field(form: LinearLayout, title: String, value: String, password: Boolean = false, number: Boolean = false, decimal: Boolean = false, update: (String) -> Unit): EditText {
         label(form, title)
         return EditText(this).apply {
             hint = title; contentDescription = title; isSingleLine = true; textSize = 15f
             setTextColor(UiStyle.text); setHintTextColor(UiStyle.muted); background = UiStyle.shape(this@SettingsActivity, UiStyle.surface, stroke = true)
             setPadding(dp(12), dp(10), dp(12), dp(10)); minHeight = dp(48)
-            inputType = if (password) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD else if (number) InputType.TYPE_CLASS_NUMBER else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            inputType = if (password) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD else if (decimal) InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL else if (number) InputType.TYPE_CLASS_NUMBER else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
             isSaveEnabled = false; importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
             setText(value); addTextChangedListener(object : TextWatcher { override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {} ; override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { update(s.toString()) }; override fun afterTextChanged(s: Editable?) {} })
             form.addView(this, LinearLayout.LayoutParams(-1, -2))
@@ -333,7 +333,6 @@ class SettingsActivity : AppCompatActivity() {
         val value = models.getJSONObject(modelIndex); val form = form()
         field(form, "模型 ID", value.optString("id")) { value.put("id", it.trim()) }
         field(form, "显示名称", value.optString("name")) { value.put("name", it) }
-        label(form, "获取模型会补全接口提供的能力；缺失项可按模型文档设置，已有设置会保留。")
         fun capability(title: String, current: Boolean?, change: (Boolean?) -> Unit) {
             label(form, title)
             var selected = if (current == null) 0 else if (current) 1 else 2
@@ -356,9 +355,13 @@ class SettingsActivity : AppCompatActivity() {
         capability("思考能力", value.opt("reasoning") as? Boolean) { supported ->
             if (supported == null) value.remove("reasoning") else value.put("reasoning", supported)
         }
-        field(form, "上下文长度", value.optString("contextWindow"), number = true) { if (it.isBlank()) value.remove("contextWindow") else value.put("contextWindow", it.toIntOrNull() ?: 0) }
-        field(form, "最大输出长度", value.optString("maxTokens"), number = true) { if (it.isBlank()) value.remove("maxTokens") else value.put("maxTokens", it.toIntOrNull() ?: 0) }
-        label(form, "长度留空时使用应用预算：上下文 128000、输出 8192 tokens；并非模型声明的上限。")
+        for ((key, title) in listOf("contextWindow" to "上下文长度（K）", "maxTokens" to "最大输出长度（K）")) {
+            val display = if (value.has(key)) java.math.BigDecimal.valueOf(value.getLong(key)).movePointLeft(3).stripTrailingZeros().toPlainString() else ""
+            field(form, title, display, decimal = true) {
+                if (it.isBlank()) value.remove(key)
+                else value.put(key, runCatching { it.toBigDecimal().movePointRight(3).setScale(0, java.math.RoundingMode.HALF_UP).longValueExact() }.getOrDefault(0L))
+            }
+        }
         action(form, "完成") { require(value.optString("id").isNotBlank()) { "请填写模型 ID" }; open("connection") }
         action(form, "移除此模型", danger = true) { models.remove(modelIndex); open("connection") }
     }

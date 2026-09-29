@@ -42,14 +42,14 @@ try {
   assert.equal(await page.getByLabel('模型 ID', { exact: true }).inputValue(), 'mock');
   await page.getByText('模型能力设置', { exact: true }).click();
   assert.equal(await page.getByLabel('图片输入', { exact: true }).inputValue(), '');
-  assert.equal(await page.getByLabel('上下文长度', { exact: true }).inputValue(), '24000');
+  assert.equal(await page.getByLabel('上下文长度（K）', { exact: true }).inputValue(), '24');
   await page.getByLabel('图片输入', { exact: true }).selectOption('true');
   await page.getByLabel('思考能力', { exact: true }).selectOption('true');
   assert.equal(await page.getByRole('checkbox', { checked: true }).count(), 0);
-  await page.getByLabel('上下文长度', { exact: true }).fill('32000');
-  await page.getByLabel('最大输出长度', { exact: true }).fill('4000');
+  await page.getByLabel('上下文长度（K）', { exact: true }).fill('32');
+  await page.getByLabel('最大输出长度（K）', { exact: true }).fill('8.192');
   await page.getByRole('button', { name: '发现模型' }).click();
-  assert.equal(await page.getByLabel('上下文长度', { exact: true }).inputValue(), '32000');
+  assert.equal(await page.getByLabel('上下文长度（K）', { exact: true }).inputValue(), '32');
   await page.getByRole('button', { name: '设为默认' }).click();
   await page.getByRole('button', { name: '保存设置' }).click();
   await page.getByRole('status').filter({ hasText: '已完成' }).waitFor();
@@ -57,6 +57,7 @@ try {
   await page.waitForFunction(async () => (await window.Desktop.invoke('settings')).connections[0].models[0]?.contextWindow === 32000);
   const saved = await page.evaluate(() => window.Desktop.invoke('settings'));
   assert.equal(saved.connections[0].models[0].contextWindow, 32000);
+  assert.equal(saved.connections[0].models[0].maxTokens, 8192);
   assert.equal(saved.connections[0].models[0].thinkingLevels, undefined);
   assert.equal(saved.connections[0].models[0].reasoning, true);
   await page.getByRole('button', { name: '完成', exact: true }).click();
@@ -64,7 +65,8 @@ try {
   await page.getByRole('button', { name: '管理模型', exact: true }).click();
   await page.getByText('模型能力设置', { exact: true }).click();
   assert.equal(await page.getByLabel('图片输入', { exact: true }).inputValue(), 'true');
-  assert.equal(await page.getByLabel('上下文长度', { exact: true }).inputValue(), '32000');
+  assert.equal(await page.getByLabel('上下文长度（K）', { exact: true }).inputValue(), '32');
+  assert.equal(await page.getByLabel('最大输出长度（K）', { exact: true }).inputValue(), '8.192');
   await page.screenshot({ path: path.join(data, 'settings.png') });
   console.log('Electron sandboxed welcome, settings and safeStorage: PASS');
 } finally {

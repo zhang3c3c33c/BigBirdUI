@@ -117,7 +117,7 @@ class SettingsActivityTest : ForegroundDeviceTest() {
                 views(activity).filterIsInstance<Button>().single { it.text == "Capability fixture" }.performClick()
                 views(activity).filterIsInstance<EditText>().single { it.contentDescription == "模型 ID" }.setText("unknown-model-fixture")
                 assertEquals(1, views(activity).filterIsInstance<android.widget.Spinner>().single { it.contentDescription == "图片输入" }.selectedItemPosition)
-                assertEquals("32000", views(activity).filterIsInstance<EditText>().single { it.contentDescription == "上下文长度" }.text.toString())
+                assertEquals("32", views(activity).filterIsInstance<EditText>().single { it.contentDescription == "上下文长度（K）" }.text.toString())
                 assertFalse(views(activity).filterIsInstance<TextView>().any { it.text.toString().startsWith("Pi 模型元数据") })
             }
         } finally { instrumentation.runOnMainSync { activity.finish() } }
