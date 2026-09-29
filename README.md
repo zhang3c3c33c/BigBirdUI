@@ -128,7 +128,7 @@ vendor/        随源码保留的 scrcpy 资源和上游许可证
 
 源码仓库：[zhang3c3c33c/BigBirdUI](https://github.com/zhang3c3c33c/BigBirdUI)；问题与建议请通过 [GitHub Issues](https://github.com/zhang3c3c33c/BigBirdUI/issues)提交。
 
-环境准备、测试命令和提交约定见 [CONTRIBUTING.md](CONTRIBUTING.md)。[文档索引](docs/README.md)列出所有专题；[发布清单](docs/development/RELEASE-CHECKLIST.md)记录首次公开前的待办。
+环境准备、测试命令和提交约定见 [CONTRIBUTING.md](CONTRIBUTING.md)。[文档索引](docs/README.md)列出所有专题；[发布清单](docs/development/RELEASE-CHECKLIST.md)记录源码公开结果与安装包发布待办。
 
 ## 许可证与第三方组件
 

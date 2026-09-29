@@ -16,6 +16,14 @@
 
 根据维护者确认，对外只支持 Windows 桌面端与 Android 本地版。首页移除 Pi / MCP 的独立启动流程；三份接口文档及两份 MCP 配置示例归入 `docs/development/`，同步贡献指南、索引、仓库约定和问题模板。本次仅修改文档与示例位置，检查本地链接，不重复运行此前的代码测试。修正前文档副本保存在 `runs/open-source-prep/before-support-scope.zip`。
 
+## 公开发布与托管验证
+
+源码已发布到 [zhang3c3c33c/BigBirdUI](https://github.com/zhang3c3c33c/BigBirdUI)，采用 MIT，版权署名为 zhang3c3c33c；私密漏洞报告已启用。
+
+提交 `75ee655` 的 [GitHub CI](https://github.com/zhang3c3c33c/BigBirdUI/actions/runs/36592792459)通过：Python 154 项、Node 206 项、两套 TypeScript 检查。Node 另有 1 项真实历史会话回放因本机夹具不公开而跳过；合成截图场景已通过。首次 CI 暴露的 `runs/` 目录依赖已由测试初始化修复。另已构建并检查 Python wheel 中的 MIT 元数据与许可证文件。
+
+尚未发布 APK / Windows 安装包，本轮未执行真机或真实模型测试。以下本地记录保留初次整理时的验证范围。
+
 ## 本地验证（上一轮整理）
 
 Windows；Node 24.15.0、Python 3.12.14；使用已有本地依赖。
@@ -37,10 +45,10 @@ Node 测试合计 207 项，与 Python 合计 361 项。测试日志在被忽略
 
 另检查示例 JSON、整理文档的本地链接、打包引用的文档存在性、打包脚本 JavaScript 语法及敏感文件的 Git 忽略行为。
 
-没有执行真机、真实模型 API、浏览器 / Electron 集成、APK 或 Windows 发布包构建。GitHub Actions 尚未推送运行，干净环境重新安装依赖尚未验证；以上通过结果仅指本地无设备测试。
+初次整理未执行真机、真实模型 API、浏览器 / Electron 集成、APK 或 Windows 发布包构建。以上表格仅指该轮本地无设备测试；公开后的干净环境验证见上文。
 
 ## 恢复与后续
 
 整理前 477 个候选文件的原始字节保存在 `runs/open-source-prep/before-organization.zip`；对应哈希清单为 `before-organization.sha256.json`，文档映射为 `moves.json`。ZIP 已逐文件核验。备份含未脱敏原文，只作本机恢复用途，不进入公开仓库。
 
-仓库仍无首个提交；未创建 GitHub 仓库、推送或发布。项目许可证、版权署名、具体仓库地址及安全联系渠道待维护者确定，完整后续见 [发布清单](../development/RELEASE-CHECKLIST.md)。
+源码公开已完成。安装包构建、许可清单及真机验收等后续事项见 [发布清单](../development/RELEASE-CHECKLIST.md)。
