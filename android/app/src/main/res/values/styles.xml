@@ -1,0 +1,27 @@
+<resources>
+    <style name="Theme.BBUI" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#3F6340</item>
+        <item name="android:colorControlActivated">#3F6340</item>
+        <item name="android:colorControlNormal">#718076</item>
+        <item name="android:textColorPrimary">#303B35</item>
+        <item name="android:textColorSecondary">#718076</item>
+        <item name="android:windowBackground">#FAF9F6</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:statusBarColor">#FAF9F6</item>
+        <item name="android:navigationBarColor">#FAF9F6</item>
+    </style>
+    <style name="Theme.BBUI.Settings" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorAccent">#3F6340</item>
+        <item name="colorControlActivated">#3F6340</item>
+        <item name="android:textColorPrimary">#303B35</item>
+        <item name="android:textColorSecondary">#718076</item>
+        <item name="android:windowBackground">#FAF9F6</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:statusBarColor">#FAF9F6</item>
+        <item name="android:navigationBarColor">#FAF9F6</item>
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
+    </style>
+</resources>

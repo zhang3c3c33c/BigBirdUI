@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(bbui_runtime)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+add_library(node SHARED IMPORTED)
+set_target_properties(node PROPERTIES IMPORTED_LOCATION
+  ${CMAKE_CURRENT_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libnode.so)
+add_library(bbui_node SHARED node_bridge.cpp)
+target_include_directories(bbui_node PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../vendor/include/node)
+target_link_libraries(bbui_node node log)
+target_link_options(bbui_node PRIVATE "-Wl,-z,max-page-size=16384")

@@ -1,0 +1,38 @@
+{
+  "name": "bbui-android-chat",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/contract.test.ts",
+    "test:browser": "npm run build && tsx --test tests/browser.test.ts tests/questions.browser.test.ts"
+  },
+  "dependencies": {
+    "@assistant-ui/react": "0.15.22",
+    "@assistant-ui/react-markdown": "0.14.17",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "remark-gfm": "4.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "playwright": "1.58.2",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3",
+    "vite": "7.3.1"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zhang3c3c33c/BigBirdUI.git",
+    "directory": "android/chat-ui"
+  },
+  "homepage": "https://github.com/zhang3c3c33c/BigBirdUI#readme",
+  "bugs": {
+    "url": "https://github.com/zhang3c3c33c/BigBirdUI/issues"
+  }
+}

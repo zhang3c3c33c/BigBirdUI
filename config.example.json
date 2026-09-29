@@ -1,0 +1,6 @@
+{
+  "serial": "REPLACE_WITH_ADB_SERIAL",
+  "input_backend": "scrcpy",
+  "blocked_packages": [],
+  "observation_max_age_seconds": 180
+}

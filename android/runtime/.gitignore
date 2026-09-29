@@ -1,0 +1,4 @@
+vendor/
+build/
+.cxx/
+src/main/jniLibs/

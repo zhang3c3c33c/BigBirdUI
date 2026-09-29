@@ -1,0 +1,6 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.INTERNET" />
+  <application>
+    <service android:name=".PiAgentService" android:exported="false" android:process=":agent" />
+  </application>
+</manifest>

@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 私密安全报告
+    url: https://github.com/zhang3c3c33c/BigBirdUI/security/advisories/new
+    about: 请通过私密渠道报告漏洞，不要在公开 Issue 中上传敏感信息。
