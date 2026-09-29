@@ -1,16 +1,17 @@
-# 第三方组件
+# 第三方许可
 
-BigBirdUI 自有代码采用 [MIT](LICENSE)，第三方组件保留原版权及许可证。
+BigBirdUI 自有代码采用 [MIT](LICENSE)，第三方组件保留原版权与许可证。
 
-| 组件 | 来源与许可材料 |
+| 组件 | 版本及许可位置 |
 | --- | --- |
-| scrcpy | 固定 4.1；[上游](https://github.com/Genymobile/scrcpy)、仓库内 `vendor/scrcpy/LICENSE`，下载脚本校验二进制哈希 |
-| Pi、聊天 UI 与 npm 依赖 | 根目录及 `android/chat-ui` 的 lockfile；打包时保留许可证和组件索引 |
-| Python、UIAutomator2、PyAV、iPhone 依赖 | `scripts/desktop/requirements.lock`；包内 Python 许可及各组件元数据 |
-| Node / nodejs-mobile | 固定版本及对应上游许可证；Android 下载同时校验哈希 |
-| Android、Kotlin、Shizuku | Gradle 依赖声明及实际解析的组件许可 |
-| Grafika EGL 辅助类 | `android/device/GRAFIKA-UPSTREAM.txt` 记录来源，组件内保留 Apache-2.0 许可 |
+| Pi、聊天 UI、npm 依赖 | 根目录和 `android/chat-ui` 的 lockfile；包内许可索引 |
+| Python 与 iPhone 依赖 | `scripts/desktop/requirements.lock`；包内组件元数据 |
+| scrcpy | `vendor/scrcpy/LICENSE` |
+| Node / nodejs-mobile | 包内 Node 许可证 |
+| Android、Kotlin、Shizuku | Gradle 依赖声明及随包许可 |
+| Grafika | `android/device/GRAFIKA-UPSTREAM.txt` 及 `GRAFIKA-LICENSE` |
+| 上游工具适配 | [来源说明](pi/android/UPSTREAM-TOOLS.md) |
 
-Windows 中的 pymobiledevice3 9.34.0 及部分 iPhone 依赖声明为 GPL-3.0-or-later；部分视频库和 Python 包另有 LGPL、GPL 或 MPL 条款。项目 MIT 不替代这些条款。
+pymobiledevice3 及部分依赖采用 GPL；部分视频库和 Python 包另有 LGPL 或 MPL 条款，项目 MIT 不替代这些许可。
 
-[Release](https://github.com/zhang3c3c33c/BigBirdUI/releases) 附带许可、相关第三方源码及校验材料。再分发时应保留适用的版权声明、许可证与源码材料。主要项目鸣谢见 [首页](README.md#鸣谢)。
+[Release](https://github.com/zhang3c3c33c/BigBirdUI/releases) 的 `OPEN-SOURCE-MATERIALS.zip` 提供许可及相关源码，再分发时一并保留。
