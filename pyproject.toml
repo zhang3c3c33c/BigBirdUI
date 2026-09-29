@@ -12,9 +12,6 @@ dependencies = ["uiautomator2==3.7.0", "mcp==2.2.0", "av==18.1.0"]
 [project.optional-dependencies]
 ios = ["pymobiledevice3==9.34.0", "pmd-pytcp==0.0.6", "pytun-pmd3==3.0.3", "construct-typing==0.7.0"]
 
-[project.scripts]
-bbui = "bbui.cli:main"
-
 [build-system]
 requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"

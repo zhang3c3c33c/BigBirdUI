@@ -1,4 +1,4 @@
-"""Download the pinned official scrcpy server and its license/protocol references."""
+"""Download the pinned official scrcpy server and its license."""
 import concurrent.futures
 import hashlib
 from pathlib import Path
@@ -23,11 +23,6 @@ if __name__ == '__main__':
     ROOT.mkdir(parents=True, exist_ok=True)
     base = 'https://raw.githubusercontent.com/Genymobile/scrcpy/v4.1/'
     files = [('scrcpy-server-v4.1', 'https://github.com/Genymobile/scrcpy/releases/download/v4.1/scrcpy-server-v4.1'),
-             ('LICENSE', base + 'LICENSE'), ('develop.md', base + 'doc/develop.md')]
-    for name, folder in [('Controller', 'control'), ('ControlMessageReader', 'control'),
-                         ('DeviceMessageWriter', 'control'), ('DesktopConnection', 'device'),
-                         ('FakeContext', ''), ('Options', '')]:
-        files.append((name + '.java', base + 'server/src/main/java/com/genymobile/scrcpy/' +
-                      (folder + '/' if folder else '') + name + '.java'))
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+             ('LICENSE', base + 'LICENSE')]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
         print(list(pool.map(fetch, files)))

@@ -7,7 +7,7 @@ import { createAssistantMessageEventStream } from '@earendil-works/pi-ai';
 import { createHash } from 'node:crypto';
 import { PhoneBridge, ROOT, convertContent } from '../pi/bridge.ts';
 import { Check } from 'typebox/value';
-import extension, { PhoneSchema } from '../pi/phone-extension.ts';
+import extension, { PhoneSchema } from './fixtures/phone-extension.ts';
 import { desktopPhoneSchema } from '../pi/phone-contract.ts';
 
 before(async () => { await mkdir(join(ROOT, 'runs'), { recursive: true }); });

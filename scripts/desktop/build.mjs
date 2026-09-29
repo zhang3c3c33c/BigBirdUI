@@ -1,5 +1,5 @@
 import { build } from 'esbuild';
-import { mkdir, readFile, writeFile, copyFile, cp, readdir } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, copyFile, cp, readdir, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -49,9 +49,19 @@ await build({ entryPoints: [path.join(root, 'desktop/main.mjs')], outfile: path.
 await copyFile(path.join(root, 'desktop/preload.cjs'), path.join(app, 'preload.cjs'));
 await copyFile(path.join(root, 'LICENSE'), path.join(app, 'LICENSE'));
 await copyFile(path.join(root, 'THIRD-PARTY-NOTICES.md'), path.join(app, 'THIRD-PARTY-NOTICES.md'));
-await copyFile(path.join(root, 'docs/guides/DESKTOP.md'), path.join(app, 'README.md'));
-await copyFile(path.join(root, 'docs/guides/IOS-DESKTOP-CAPABILITIES.md'), path.join(app, 'IOS-CAPABILITIES.md'));
-if (existsSync(path.join(root, 'docs/reports/IOS-DESKTOP-ACCEPTANCE.md'))) await copyFile(path.join(root, 'docs/reports/IOS-DESKTOP-ACCEPTANCE.md'), path.join(app, 'IOS-ACCEPTANCE.md'));
+// Remove only obsolete generated files when reusing an existing staging directory.
+for (const name of ['IOS-ACCEPTANCE.md', 'IOS-CAPABILITIES.md', 'RECONNECT-ACCEPTANCE.md',
+  'source/bbui/cli.py', 'source/bbui/mcp_server.py']) {
+  await rm(path.join(app, name), { force: true });
+}
+await writeFile(path.join(app, 'README.md'), `# BigBirdUI · 大鸟手机助手
+
+运行 BBUI.exe，通过 USB 连接 Android 或 iPhone，然后配置支持图片输入的模型。
+
+使用教程：https://github.com/zhang3c3c33c/BigBirdUI#使用教程
+
+本版为预览版，Windows 程序未做代码签名。自有代码采用 MIT，第三方组件遵循各自许可证。
+`);
 await writeFile(path.join(app, 'package.json'), JSON.stringify({ name: 'bbui-desktop', productName: 'BBUI', version: '0.1.0', license: 'MIT', type: 'module', main: 'main.mjs' }));
 run(process.execPath, [path.join(root, 'android/chat-ui/node_modules/vite/bin/vite.js'), 'build'], path.join(root, 'android/chat-ui'), { ...process.env, BBUI_DESKTOP_BUILD: '1' });
 await mkdir(path.join(app, 'node'), { recursive: true });

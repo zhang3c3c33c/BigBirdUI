@@ -1,10 +1,11 @@
-import { applyPhonePrompt, registerPhoneSkill } from './phone-skill.ts';
-import { registerTaskState, TASK_INSTRUCTIONS } from './task-state.ts';
+// SDK regression adapter; the application uses pi/desktop/extension.ts.
+import { applyPhonePrompt, registerPhoneSkill } from '../../pi/phone-skill.ts';
+import { registerTaskState, TASK_INSTRUCTIONS } from '../../pi/task-state.ts';
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
-import { PhoneSchema, PHONE_INSTRUCTIONS, toolFailure, validPhoneIntent } from './phone-contract.ts';
-export { PhoneSchema, PHONE_INSTRUCTIONS } from './phone-contract.ts';
+import { PhoneSchema, PHONE_INSTRUCTIONS, toolFailure, validPhoneIntent } from '../../pi/phone-contract.ts';
+export { PhoneSchema, PHONE_INSTRUCTIONS } from '../../pi/phone-contract.ts';
 import { createHash } from 'node:crypto';
-import { PhoneBridge } from './bridge.ts';
+import { PhoneBridge } from '../../pi/bridge.ts';
 
 export default function phoneExtension(pi: ExtensionAPI) {
   registerTaskState(pi);

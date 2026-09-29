@@ -42,3 +42,11 @@ android/chat-ui/playwright-report/
 /coverage/
 /dist/
 /build/
+
+# Keep internal working instructions and generated brand exports local
+/AGENTS.md
+/design/brand/png/
+/design/brand/preview.*
+/design/brand/proposals/
+/design/brand/*.svg
+/design/brand/*.zip

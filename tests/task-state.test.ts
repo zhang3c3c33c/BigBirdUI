@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { createAgentSession, DefaultResourceLoader, ModelRuntime, SettingsManager, SessionManager } from '@earendil-works/pi-coding-agent';
 import { Check } from 'typebox/value';
 import { registerTaskState, readTaskState, TaskStateSchema, TASK_CONTEXT_TYPE, type TaskState } from '../pi/task-state.ts';
-import desktopExtension from '../pi/phone-extension.ts';
+import desktopExtension from './fixtures/phone-extension.ts';
 import androidExtension from '../pi/android/extension.ts';
 import { PhoneBridge, ROOT } from '../pi/bridge.ts';
 import { AndroidPhoneBridge } from '../pi/android/bridge.ts';
