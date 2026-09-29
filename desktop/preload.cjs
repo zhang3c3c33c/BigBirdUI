@@ -1,5 +1,5 @@
 const { contextBridge, ipcRenderer } = require('electron');
-const operations = new Set(['settings', 'saveSettings', 'devices', 'connect', 'disconnect', 'frame', 'input', 'memory', 'discover', 'probe', 'importSessions', 'importConfig', 'diagnostics', 'recover']);
+const operations = new Set(['settings', 'saveSettings', 'devices', 'connect', 'disconnect', 'frame', 'input', 'memory', 'discover', 'probe', 'recover']);
 contextBridge.exposeInMainWorld('BBUI', { postMessage(message) { ipcRenderer.send('bbui-command', message); } });
 contextBridge.exposeInMainWorld('Desktop', {
   invoke(operation, params) {

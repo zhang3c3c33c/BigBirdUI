@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { createServer } from 'node:http';
 import { randomUUID, randomBytes, timingSafeEqual, createHash } from 'node:crypto';
-import { mkdir, readFile, copyFile, unlink } from 'node:fs/promises';
+import { mkdir, readFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { PhoneBridge } from '../pi/bridge.ts';
@@ -988,16 +988,6 @@ export class DesktopHost extends EventEmitter {
       worker = this.memoryWorker;
     }
     return worker.request({ ...command, type: 'bbui_memory' });
-  }
-  async importFiles(files) {
-    if (this.state.active) throw new Error('请先停止当前任务');
-    for (const file of files) {
-      if (path.extname(file).toLowerCase() !== '.jsonl') throw new Error('请选择 Pi JSONL 会话');
-      const first = (await readFile(file, 'utf8')).split('\n', 1)[0];
-      if (JSON.parse(first).type !== 'session') throw new Error('不是 Pi 会话文件');
-      if (!(await this.catalog.list()).some(s => s.id === JSON.parse(first).id)) await copyFile(file, path.join(this.home, 'sessions', `import-${randomUUID()}.jsonl`));
-    }
-    await this.refreshSessions(); this.publish();
   }
   async close() {
     this.closing = true; this.cancelRecovery(); clearTimeout(this.deviceCheckTimer);

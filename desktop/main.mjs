@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, safeStorage, dialog, shell, Menu } from 'electron';
 import { fileURLToPath } from 'node:url';
-import { readFile, mkdir } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { windowsPlatform } from './platform.mjs';
 import { DesktopHost } from './host.mjs';
@@ -55,7 +55,6 @@ else app.whenReady().then(async () => {
       case 'disconnect': await host.disconnect(); return true;
       case 'devices': {
         const result = await discoverDevices(platform, params);
-        host.discoveryErrors = result.errors;
         return result;
       }
       case 'frame':
@@ -82,19 +81,6 @@ else app.whenReady().then(async () => {
             worker.on('failure', error => { clearTimeout(timer); reject(error); }); });
         } finally { await worker.close(); }
       }
-      case 'importSessions': {
-        const chosen = await dialog.showOpenDialog(window, { properties: ['openFile', 'multiSelections'], filters: [{ name: 'Pi 会话', extensions: ['jsonl'] }] });
-        if (!chosen.canceled) await host.importFiles(chosen.filePaths); return true;
-      }
-      case 'importConfig': {
-        const chosen = await dialog.showOpenDialog(window, { properties: ['openFile'], filters: [{ name: '旧电脑端配置', extensions: ['json'] }] });
-        if (chosen.canceled) return null;
-        const value = JSON.parse(await readFile(chosen.filePaths[0], 'utf8'));
-        return { serial: value.serial || '', devicePlatform: value.devicePlatform || 'android', blocked_packages: value.blocked_packages || [] };
-      }
-      case 'diagnostics': return { version: app.getVersion(), platform: process.platform, architecture: process.arch, dataDirectory: host.data,
-        connected: host.connected, devicePlatform: host.settings.devicePlatform || 'android', connectionStatus: host.connectionStatus,
-        discoveryErrors: host.discoveryErrors || [], screens: host.snapshot().desktop.screens, externalDiscoveryError: host.externalDiscoveryError || null };
       default: throw new Error('不支持的桌面操作');
     }
   });

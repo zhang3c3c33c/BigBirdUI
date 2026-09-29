@@ -352,7 +352,7 @@ function Settings({ close, snapshot, initialTab = 'device' }: { close(): void; s
   const update = (change: any) => setValue((previous: any) => ({ ...previous, ...change }));
   if (!value) return <div className="settings-backdrop"><section className="settings"><button onClick={close}>关闭</button><p>{message || '正在载入设置…'}</p></section></div>;
   return <div className="settings-backdrop"><section className="settings" role="dialog" aria-label="设置"><header><h2>设置</h2><button onClick={close}>完成</button></header>
-    <nav>{[['device', '设备'], ['models', '模型'], ['search', '搜索'], ['memory', '记忆'], ['data', '数据与诊断']].map(([key, name]) => <button aria-pressed={tab === key} key={key} onClick={() => setTab(key)}>{name}</button>)}</nav>
+    <nav>{[['device', '设备'], ['models', '模型'], ['search', '搜索'], ['memory', '记忆']].map(([key, name]) => <button aria-pressed={tab === key} key={key} onClick={() => setTab(key)}>{name}</button>)}</nav>
     <div className="settings-body">
     {tab === 'device' && <DeviceConnection snapshot={snapshot} saved={value} connected={update} />}
     {tab === 'models' && <>{value.connections.map((c: any, index: number) => {
@@ -376,7 +376,6 @@ function Settings({ close, snapshot, initialTab = 'device' }: { close(): void; s
     })}<button onClick={() => update({ connections: [...value.connections, { id: crypto.randomUUID(), name: '', provider: 'bbui', api: 'openai-completions', baseUrl: '', apiKey: '', models: [] }] })}>添加连接</button></>}
     {tab === 'search' && <><label>搜索供应商<select value={value.tools.search.provider} onChange={e => update({ tools: { search: { ...value.tools.search, provider: e.target.value } } })}><option value="">未配置</option><option value="bocha">博查</option><option value="baidu">百度 AI 搜索</option></select></label><label>API 密钥<input type="password" value={value.tools.search.apiKey} placeholder={value.tools.search.hasKey ? '已保存，留空沿用' : ''} onChange={e => update({ tools: { search: { ...value.tools.search, apiKey: e.target.value } } })} /></label></>}
     {tab === 'memory' && <><button onClick={async () => setMemory(await act('memory', { action: 'read' }))}>载入最新记忆</button>{memory && <><textarea className="memory-editor" value={memory.content} onChange={e => setMemory({ ...memory, content: e.target.value })} /><button onClick={async () => { const result = await act('memory', { action: 'write', ...memory }); if (result) setMemory(result); }}>保存记忆</button></>}</>}
-    {tab === 'data' && <><p>数据独立保存在当前 Windows 用户目录。导入会复制原文件。</p><button onClick={() => void act('importSessions')}>导入 Pi 会话</button><button onClick={async () => { const result = await act('importConfig'); if (result) update(result); }}>导入旧设备配置</button><button onClick={() => void act('diagnostics').then(r => r && setMessage(JSON.stringify(r, null, 2)))}>查看诊断</button></>}
     </div>{tab !== 'device' && <footer>{message && <p role="status">{message}</p>}<button className="primary" onClick={async () => { const result = await act('saveSettings', value); if (result) setValue(result); }}>保存设置</button></footer>}
   </section></div>;
 }
