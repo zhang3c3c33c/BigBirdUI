@@ -9,6 +9,7 @@ BigBirdUI 自有代码采用 [MIT](LICENSE)，第三方组件保留原版权及�
 | Python、UIAutomator2、PyAV、iPhone 依赖 | `scripts/desktop/requirements.lock`；包内 Python 许可及各组件元数据 |
 | Node / nodejs-mobile | 固定版本及对应上游许可证；Android 下载同时校验哈希 |
 | Android、Kotlin、Shizuku | Gradle 依赖声明及实际解析的组件许可 |
+| Grafika EGL 辅助类 | `android/device/GRAFIKA-UPSTREAM.txt` 记录来源，组件内保留 Apache-2.0 许可 |
 
 Windows 中的 pymobiledevice3 9.34.0 及部分 iPhone 依赖声明为 GPL-3.0-or-later；部分视频库和 Python 包另有 LGPL、GPL 或 MPL 条款。项目 MIT 不替代这些条款。
 
