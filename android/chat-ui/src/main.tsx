@@ -14,6 +14,7 @@ import { Panel, QueuedSteerButton, QueuePanel, TaskProgress } from './panels';
 import { ModelControls, useModelSelection } from './models';
 import { QuestionCard, QuestionContext, type QuestionDraft } from './questions';
 import { BrandMark } from './brand';
+import { APP_NAME, ASSISTANT_NAME, STOP_LABEL } from './branding';
 import { viewStateSync } from './view-state';
 
 const markdownComponents = {
@@ -82,7 +83,7 @@ function AssistantMessage() {
       ((part.type === 'text' || part.type === 'reasoning') && part.text.trim().length > 0)));
   const hasCopyableText = useAuiState((state) => state.message.content.some((part) => part.type === 'text' && part.text.trim().length > 0));
   return <MessagePrimitive.Root className="message assistant-message" data-message-id={id}>
-    <div className="assistant-label"><span className="avatar"><BrandMark small /></span>BBUI</div>
+    <div className="assistant-label"><span className="avatar"><BrandMark small /></span>{ASSISTANT_NAME}</div>
     <MessagePrimitive.Parts components={{ Text: AssistantText, Reasoning, tools: { Fallback: Tool }, Empty: EmptyPart }} />
     {waiting && <span className="waiting pulse">正在准备回复…</span>}
     {status?.type === 'incomplete' && <div className={`message-notice ${status.reason === 'error' ? 'error' : ''}`}>
@@ -126,7 +127,7 @@ function SessionComposer({ snapshot, save, begin, shouldClear, restored, selecti
     <ComposerPrimitive.Input className="composer-input" placeholder="输入消息" aria-label="消息" minRows={1} maxRows={5} submitMode="none" addAttachmentOnPaste={false}
       unstable_focusOnRunStart={false} unstable_focusOnScrollToBottom={false} unstable_focusOnThreadSwitched={false}
       onChange={event => save(event.target.value)} />
-    <button type="button" className="send-button" aria-label={stop ? '停止任务' : snapshot.runningSessionId ? '加入队列' : '发送消息'}
+    <button type="button" className="send-button" aria-label={stop ? STOP_LABEL : snapshot.runningSessionId ? '加入队列' : '发送消息'}
       disabled={!stop && (disconnected || !text.trim() || !snapshot.sessionsReady || selectionPending || !restored || draftSession !== snapshot.sessionId || sending)}
       onClick={() => stop ? post({ type: 'stop' }) : send()}>
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -139,7 +140,7 @@ function SessionComposer({ snapshot, save, begin, shouldClear, restored, selecti
 function ExecutionControls({ snapshot }: { snapshot: Snapshot }) {
   if (snapshot.desktop?.connectionStatus?.code === 'reconnecting') return <div className="global-execution" role="status">
     <span className="execution-dot pulse" aria-hidden="true" /><span>{snapshot.desktop.connectionStatus.message}</span>
-    <button className="stop-action" onClick={() => post({ type: 'stop' })}>停止</button>
+    <button className="stop-action" onClick={() => post({ type: 'stop' })}>{STOP_LABEL}</button>
   </div>;
   const control = snapshot.control;
   const question = snapshot.pendingQuestion;
@@ -157,7 +158,7 @@ function ExecutionControls({ snapshot }: { snapshot: Snapshot }) {
     {control && mode === 'running' && <button onClick={() => post({ type: 'takeOver', controlId: control.id })}>我来操作</button>}
     {control && mode === 'manual' && <button onClick={() => post({ type: control.canResume ? 'resumeTask' : 'endManual', controlId: control.id })}>{control.canResume ? '交给 AI 继续' : '结束操作'}</button>}
     {control?.canResume && (mode === 'stopped' || mode === 'error') && <button onClick={() => post({ type: 'resumeTask', controlId: control.id })}>继续任务</button>}
-    {['running', 'taking_over', 'resuming', 'manual'].includes(mode) && <button className="stop-action" aria-label={mode === 'manual' ? '紧急停止' : '停止'} onClick={() => post({ type: 'stop' })}>{mode === 'manual' ? '■' : '停止'}</button>}
+    {['running', 'taking_over', 'resuming', 'manual'].includes(mode) && <button className="stop-action" aria-label={STOP_LABEL} onClick={() => post({ type: 'stop' })}>{mode === 'manual' ? '■' : STOP_LABEL}</button>}
   </div>;
 }
 export function Chat({ aside, previewControl }: { aside?: ReactNode; previewControl?: { expanded: boolean; onToggle(): void } }) {
@@ -294,7 +295,7 @@ export function Chat({ aside, previewControl }: { aside?: ReactNode; previewCont
     <ThreadPrimitive.Root className="chat-shell">
       <header className="session-heading">
         <button className="menu-button" aria-label="打开会话栏" onClick={() => setSidebarOpen(true)}>☰</button>
-        <strong>{snapshot.sessions?.find(s => s.id === snapshot.sessionId)?.title ?? 'BBUI'}</strong>
+        <strong>{snapshot.sessions?.find(s => s.id === snapshot.sessionId)?.title ?? APP_NAME}</strong>
         {snapshot.task && <button className="progress-button" onClick={() => setPanel('progress')}>进度</button>}
         {previewControl ? <button className="preview-entry" aria-expanded={previewControl.expanded} aria-pressed={previewControl.expanded} onClick={previewControl.onToggle}>手机画面</button>
           : <button className="preview-entry" aria-label="查看执行画面" onClick={() => post({ type: 'openPreview' })}>画面</button>}
@@ -340,7 +341,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { failed: 
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
   render() {
-    if (this.state.failed) return <div className="error-fallback"><h2>聊天界面暂时无法显示</h2><p>对话已保存在本机。你可以停止当前操作，然后重新打开界面。</p><button onClick={() => post({ type: 'stop' })}>停止操作</button><button onClick={() => location.reload()}>重新打开界面</button></div>;
+    if (this.state.failed) return <div className="error-fallback"><h2>聊天界面暂时无法显示</h2><p>对话已保存在本机。你可以停止当前操作，然后重新打开界面。</p><button onClick={() => post({ type: 'stop' })}>{STOP_LABEL}</button><button onClick={() => location.reload()}>重新打开界面</button></div>;
     return this.props.children;
   }
 }

@@ -189,7 +189,7 @@ class ScreenRegistry:
             try:
                 lease.__enter__()
             except OSError as error:
-                raise RuntimeError('该手机已有 BBUI 运行时占用，请复用同一 MCP 进程') from error
+                raise RuntimeError('该手机已由大鸟手机助手使用，请返回已有连接') from error
             self.lease = lease
 
     def _main(self):

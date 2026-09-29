@@ -13,7 +13,7 @@ try {
   const page = await application.firstWindow();
   page.setDefaultTimeout(35000);
   page.on('pageerror', error => console.error(error.message));
-  await page.getByRole('heading', { name: '开始使用 BBUI' }).waitFor();
+  await page.getByRole('heading', { name: 'BigBirdUI · 大鸟手机助手' }).waitFor();
   assert.equal(await page.locator('.chat-shell,.phone-pane').count(), 0);
   assert.equal(await page.getByRole('button', { name: '开始使用', exact: true }).isDisabled(), true);
   await page.screenshot({ path: path.join(data, 'window.png') });

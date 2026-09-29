@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">大鸟手机助手</string>
+    <string name="brand_full_name">BigBirdUI · 大鸟手机助手</string>
+    <string name="chat_description">大鸟手机助手聊天</string>
+    <string name="preview_description">大鸟手机助手任务屏预览</string>
+    <string name="execution_status_title">大鸟手机助手任务状态</string>
+    <string name="resume_from_app">请从大鸟手机助手界面恢复执行</string>
+    <string name="stop_task">停止任务</string>
+</resources>

@@ -28,7 +28,7 @@ class ChatWebView(context: Context, private val command: (JSONObject) -> Unit, p
     private val loader = WebViewAssetLoader.Builder().addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(context)).build()
 
     init {
-        contentDescription = "BBUI 聊天"
+        contentDescription = context.getString(R.string.chat_description)
         settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = false

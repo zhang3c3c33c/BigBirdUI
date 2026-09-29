@@ -50,7 +50,7 @@ class OnboardingActivity : AppCompatActivity() {
             setImageResource(R.drawable.ic_bbui_mark)
             importantForAccessibility = android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }, LinearLayout.LayoutParams(dp(64), dp(68)).apply { bottomMargin = dp(20) })
-        form.addView(label("开始使用 BBUI", 26f).apply { setTypeface(typeface, Typeface.BOLD) },
+        form.addView(label(getString(R.string.brand_full_name), 26f).apply { setTypeface(typeface, Typeface.BOLD) },
             LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(28) })
         fun setupCard(title: String, description: String, action: android.view.View) {
             val card = LinearLayout(this).apply {

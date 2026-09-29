@@ -23,7 +23,7 @@ class MirrorManager:
                 '--no-control', '--no-audio', '--no-clipboard-autosync', '--no-power-on',
                 '--no-cleanup', '--force-adb-forward', '--max-fps=15', '--max-size=1280',
                 '--video-bit-rate=2M', '--window-height=800',
-                f'--window-title=BBUI | {name} | display {display_id} | VIEW ONLY']
+                f'--window-title=大鸟手机助手 | {name} | display {display_id} | VIEW ONLY']
 
     def status(self, name):
         with self.mutex:

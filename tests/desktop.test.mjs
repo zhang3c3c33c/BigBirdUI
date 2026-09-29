@@ -1,3 +1,5 @@
+import path from 'node:path';
+import { APP_NAME, configureAppIdentity } from '../desktop/branding.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { bindSubmission, restoreState, validateAnswer } from '../desktop/state.mjs';
@@ -42,3 +44,18 @@ test('keyboard mapping emits Android semantics', () => {
   assert.equal(semanticKey('Delete', false).params.键名, '向前删除');
   for (const [key, name] of [['ArrowLeft', '左'], ['ArrowRight', '右'], ['ArrowUp', '上'], ['ArrowDown', '下']]) assert.equal(semanticKey(key, false).params.键名, name);
 });
+
+for (const override of [undefined, path.resolve('runs/custom profile')]) {
+  test(`renaming preserves encrypted profile and session paths (${override ? 'custom' : 'default'})`, () => {
+    const calls = [];
+    const appData = path.resolve('runs/roaming fixture');
+    const app = {
+      getPath(name) { assert.equal(name, 'appData'); return appData; },
+      setName(name) { calls.push(['name', name]); },
+      setPath(name, value) { calls.push([name, value]); },
+    };
+    configureAppIdentity(app, override ? { BBUI_DESKTOP_DATA: override } : {});
+    const expected = override || path.join(appData, 'BBUI');
+    assert.deepEqual(calls, [['name', APP_NAME], ['userData', expected], ['sessionData', expected]]);
+  });
+}

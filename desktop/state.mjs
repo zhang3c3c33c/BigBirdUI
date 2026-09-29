@@ -18,7 +18,7 @@ export function deviceIdentity(settings) {
   return `${platform}:${serial}`;
 }
 export function restoreState(saved = {}) {
-  if (saved.version !== undefined && saved.version !== 1) throw new Error('此数据版本需要更新的 BBUI，未改写原数据');
+  if (saved.version !== undefined && saved.version !== 1) throw new Error('此数据版本需要更新的大鸟手机助手，未改写原数据');
   return { version: 1, selected: saved.selected || '', views: saved.views || {}, selections: saved.selections || {},
     queue: [], paused: true, pauseReasons: [...new Set(['restart', ...(saved.pauseReasons || (saved.paused ? ['user'] : []))])],
     submissions: saved.submissions || {}, titleGeneration: saved.titleGeneration || {},

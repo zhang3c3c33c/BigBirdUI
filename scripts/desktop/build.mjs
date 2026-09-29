@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { stripTypeScriptTypes } from 'node:module';
 import { bundleTools } from '../android-runtime/bundle-tools.mjs';
 import { patchSessionReader } from '../android-runtime/patch-session-reader.mjs';
+import { APP_NAME, PRODUCT_VERSION } from '../../desktop/branding.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const app = path.join(root, '.desktop/app'), runtime = path.join(app, 'runtime'), python = path.join(app, 'python');
@@ -56,13 +57,13 @@ for (const name of ['IOS-ACCEPTANCE.md', 'IOS-CAPABILITIES.md', 'RECONNECT-ACCEP
 }
 await writeFile(path.join(app, 'README.md'), `# BigBirdUI · 大鸟手机助手
 
-运行 BBUI.exe，通过 USB 连接 Android 或 iPhone，然后配置支持图片输入的模型。
+运行 BigBirdUI.exe，通过 USB 连接 Android 或 iPhone，然后配置支持图片输入的模型。
 
 使用教程：https://github.com/zhang3c3c33c/BigBirdUI#使用教程
 
 本版为预览版，Windows 程序未做代码签名。自有代码采用 MIT，第三方组件遵循各自许可证。
 `);
-await writeFile(path.join(app, 'package.json'), JSON.stringify({ name: 'bbui-desktop', productName: 'BBUI', version: '0.1.0', license: 'MIT', type: 'module', main: 'main.mjs' }));
+await writeFile(path.join(app, 'package.json'), JSON.stringify({ name: 'bbui-desktop', productName: APP_NAME, version: PRODUCT_VERSION, license: 'MIT', type: 'module', main: 'main.mjs' }));
 run(process.execPath, [path.join(root, 'android/chat-ui/node_modules/vite/bin/vite.js'), 'build'], path.join(root, 'android/chat-ui'), { ...process.env, BBUI_DESKTOP_BUILD: '1' });
 await mkdir(path.join(app, 'node'), { recursive: true });
 await copyFile(process.execPath, path.join(app, 'node/node.exe'));

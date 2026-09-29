@@ -111,7 +111,7 @@ class ExecutionOverlayTest {
             val firstRoot = onMain { requireNotNull(root(capsule)) }
             await("capsule measured") { onMain { firstRoot.width > 0 && firstRoot.height > 0 } }
             val body = onMain { find(firstRoot, "打开执行会话") }
-            val stop = onMain { find(firstRoot, "停止当前任务") }
+            val stop = onMain { find(firstRoot, "停止任务") }
             assertEquals("bbui_execution_overlay", onMain { firstRoot.tag })
             assertTrue("Independent STOP touch target", onMain { stop.height >= 47 * context.resources.displayMetrics.density })
             val texts = onMain { descendants(firstRoot).filterIsInstance<TextView>().map { it.text.toString() } }
@@ -187,7 +187,7 @@ class ExecutionOverlayTest {
             reportGeometry(context, requireNotNull(capsule), safe, "before-restored-body-tap")
             tap(onMain { find(requireNotNull(root(capsule)), "打开执行会话") })
             await("body click calls open once") { openCount == 1 }
-            val restoredStop = onMain { find(requireNotNull(root(capsule)), "停止当前任务") }
+            val restoredStop = onMain { find(requireNotNull(root(capsule)), "停止任务") }
             onMain { restoredStop.performClick(); restoredStop.performClick() }
             assertEquals("A rapid repeated STOP calls its callback only once", 1, stopCount)
             assertEquals("STOP is isolated from body navigation", 1, openCount)
@@ -254,7 +254,7 @@ class ExecutionOverlayTest {
             capsule = newCapsule()
             onMain { requireNotNull(capsule).render(running) }
             await("STOP test window attached") { attached(capsule) }
-            val serviceStop = onMain { find(requireNotNull(root(capsule)), "停止当前任务") }
+            val serviceStop = onMain { find(requireNotNull(root(capsule)), "停止任务") }
             tap(serviceStop)
             onMain { serviceStop.performClick() }
             assertEquals(1, stopCount)

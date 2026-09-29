@@ -72,7 +72,7 @@ class DeviceLease:
                 fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError as error:
             stream.close()
-            raise RuntimeError('这台 iPhone 已被另一个 BBUI 执行器占用') from error
+            raise RuntimeError('这台 iPhone 已被另一个大鸟手机助手执行器占用') from error
         self.file = stream
 
     def close(self):

@@ -74,7 +74,7 @@ internal class ExecutionOverlay(context: Context, private val onOpen: () -> Unit
         softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
         // All positions below are in display coordinates; apply bars/cutout/IME insets exactly once.
         setFitInsetsTypes(0)
-        title = "BBUI execution status"
+        title = app.getString(R.string.execution_status_title)
     }
     private val root = CapsuleLayout(windowContext)
     private val body = LinearLayout(windowContext)
@@ -131,7 +131,7 @@ internal class ExecutionOverlay(context: Context, private val onOpen: () -> Unit
         divider.setBackgroundColor(UiStyle.border)
         root.addView(divider, LinearLayout.LayoutParams(dp(1).coerceAtLeast(1), dp(20)))
         stop.apply {
-            tag = "bbui_overlay_stop"; contentDescription = "停止当前任务"
+            tag = "bbui_overlay_stop"; contentDescription = app.getString(R.string.stop_task)
             isClickable = true; isFocusable = true
             background = RippleDrawable(ColorStateList.valueOf(0x20A05041), UiStyle.shape(windowContext, Color.TRANSPARENT, 24), UiStyle.shape(windowContext, Color.WHITE, 24))
             setOnClickListener {

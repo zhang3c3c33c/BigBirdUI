@@ -6,10 +6,10 @@ import { windowsPlatform } from './platform.mjs';
 import { DesktopHost } from './host.mjs';
 import { PiProcess } from './rpc.mjs';
 import { discoverDevices } from './devices.mjs';
+import { APP_NAME, configureAppIdentity } from './branding.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-app.setName('BBUI');
-if (process.env.BBUI_DESKTOP_DATA) app.setPath('userData', process.env.BBUI_DESKTOP_DATA);
+configureAppIdentity(app);
 if (!app.requestSingleInstanceLock()) app.quit();
 else app.whenReady().then(async () => {
   const platform = await windowsPlatform(app, safeStorage, root);
@@ -29,7 +29,7 @@ else app.whenReady().then(async () => {
     secure(stopWindow); void stopWindow.loadFile(path.join(root, 'ui', 'stop.html'));
   }
   await host.initialize();
-  window = new BrowserWindow({ width: 1400, height: 900, minWidth: 1000, minHeight: 640, icon: platform.resource('icon'), backgroundColor: '#faf9f6', title: 'BBUI', webPreferences: options });
+  window = new BrowserWindow({ width: 1400, height: 900, minWidth: 1000, minHeight: 640, icon: platform.resource('icon'), backgroundColor: '#faf9f6', title: APP_NAME, webPreferences: options });
   secure(window); Menu.setApplicationMenu(null);
   const senderAllowed = event => [window, stopWindow].some(win => win && !win.isDestroyed() && event.sender === win.webContents && event.senderFrame === win.webContents.mainFrame);
   host.on('snapshot', value => { if (!window.isDestroyed() && !window.webContents.isDestroyed()) window.webContents.send('bbui-event', value); });
@@ -118,4 +118,4 @@ else app.whenReady().then(async () => {
     }
     setTimeout(() => window.close(), 1000);
   }
-}).catch(error => { console.error('BBUI startup:', error.message); dialog.showErrorBox('BBUI 启动失败', error.message); app.exit(1); });
+}).catch(error => { console.error('BBUI startup:', error.message); dialog.showErrorBox(`${APP_NAME} 启动失败`, error.message); app.exit(1); });

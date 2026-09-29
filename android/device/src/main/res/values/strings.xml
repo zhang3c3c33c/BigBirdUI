@@ -1,0 +1,3 @@
+<resources>
+    <string name="shizuku_permission_required">请授予 %1$s Shizuku 权限后重新连接</string>
+</resources>

@@ -7,6 +7,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 
 const executable = process.argv[2];
+const previousExecutable = process.argv[3];
 const data = process.env.BBUI_TEST_DATA;
 assert.ok(executable && data, 'Specify release executable and isolated BBUI_TEST_DATA');
 const fixtures = path.join(data, '导入源 文件');
@@ -22,12 +23,18 @@ const originals = await Promise.all([configFile, sessionFile].map(file => readFi
 const env = { ...process.env, BBUI_DESKTOP_DATA: data };
 delete env.ELECTRON_RUN_AS_NODE;
 let previousState;
-for (const phase of ['import', 'reopen']) {
-  const application = await electron.launch({ executablePath: executable, args: [], env, timeout: 30000 });
+for (const phase of ['import', 'reopen', ...(previousExecutable ? ['reopen-again'] : [])]) {
+  const oldVersion = phase === 'import' && !!previousExecutable;
+  const application = await electron.launch({ executablePath: oldVersion ? previousExecutable : executable, args: [], env, timeout: 30000 });
   const mainPid = application.process().pid;
   try {
     const page = await application.firstWindow();
-    await page.getByRole('heading', { name: '开始使用 BBUI' }).waitFor();
+    await page.getByRole('heading', { name: oldVersion ? '开始使用 BBUI' : 'BigBirdUI · 大鸟手机助手' }).waitFor();
+    if (!oldVersion) {
+      const identity = await application.evaluate(({ app }) => ({ name: app.getName(), data: app.getPath('userData'), cache: app.getPath('sessionData') }));
+      assert.deepEqual(identity, { name: '大鸟手机助手', data, cache: data });
+      assert.equal(await page.title(), '大鸟手机助手');
+    }
     if (phase === 'import') {
       await application.evaluate(({ dialog }, files) => {
         dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [files.shift()] });

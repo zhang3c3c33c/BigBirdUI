@@ -149,7 +149,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         controls.addView(previewControl, LinearLayout.LayoutParams(-1, -2).apply { setMargins(dp(4), 0, dp(4), 0) })
 
         preview = SurfaceView(this).apply {
-            contentDescription = "BBUI 虚拟屏预览"
+            contentDescription = getString(R.string.preview_description)
             visibility = View.INVISIBLE
             holder.addCallback(this@MainActivity)
             setOnTouchListener { view, event ->

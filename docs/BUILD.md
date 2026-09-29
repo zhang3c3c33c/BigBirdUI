@@ -41,7 +41,7 @@ npm run desktop
 npm run desktop:package
 ```
 
-生成便携包：`.desktop/releases/BBUI-Windows-x64.zip`。
+生成便携包：`.desktop/releases/BigBirdUI-Windows-x64.zip`。
 
 ## 测试
 

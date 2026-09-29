@@ -33,7 +33,7 @@ async def discover():
 
 def discovery_error(error):
     if isinstance(error, ImportError):
-        return {'code': 'runtime_missing', 'error': 'iPhone 运行依赖不完整，请重新解压完整 BBUI 发行包'}
+        return {'code': 'runtime_missing', 'error': 'iPhone 运行依赖不完整，请重新解压完整的大鸟手机助手发行包'}
     from pymobiledevice3.exceptions import ConnectionFailedToUsbmuxdError
     if isinstance(error, (ConnectionFailedToUsbmuxdError, ConnectionRefusedError, FileNotFoundError)):
         return {'code': 'driver_missing', 'error': '无法访问 Apple 设备服务，请确认已安装 Apple Devices 或 Apple 移动设备支持'}

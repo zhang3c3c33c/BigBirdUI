@@ -104,7 +104,7 @@ test('bundled UI renders streaming content, preserves expansion and reading posi
     await page.waitForTimeout(100);
     const pagePosition = await page.locator('.viewport').evaluate((element) => ({ top: element.scrollTop, height: element.scrollHeight }));
     assert.ok(Math.abs(pagePosition.top - (pagePosition.height - oldHeight)) < 3, `history anchor drift: ${JSON.stringify(pagePosition)} old height ${oldHeight}`);
-    await page.getByRole('button', { name: '停止', exact: true }).click();
+    await page.locator('.stop-action').first().click();
     assert.ok((await page.evaluate(() => (window as unknown as { commands: Array<{ type: string }> }).commands)).some((item) => item.type === 'stop'));
 
     // assistant-ui adds a trailing Empty renderer after tool-only messages and
@@ -353,7 +353,7 @@ test('bundled UI renders streaming content, preserves expansion and reading posi
     await page.getByText('你正在操作：任务 A', { exact: true }).waitFor();
     await page.getByRole('button', { name: '交给 AI 继续', exact: true }).click();
     assert.equal(await page.getByRole('button', { name: '我来操作', exact: true }).count(), 0);
-    assert.equal(await page.getByRole('button', { name: '紧急停止', exact: true }).isVisible(), true);
+    assert.equal(await page.locator('.global-execution').getByRole('button', { name: '停止任务', exact: true }).isVisible(), true);
     const commandsBeforePreview = await page.evaluate(() => (window as unknown as { commands: unknown[] }).commands.length);
     await page.getByRole('button', { name: '查看执行画面', exact: true }).click();
     const previewCommands = await page.evaluate((start) => (window as unknown as { commands: Array<{ type: string }> }).commands.slice(start), commandsBeforePreview);
@@ -381,7 +381,7 @@ test('bundled UI renders streaming content, preserves expansion and reading posi
     await publish(page, { ...manual, revision: 123, control: { ...manual.control!, id: 'control-transition', mode: 'taking_over', canResume: false } });
     await page.getByText('正在交接：任务 A', { exact: true }).waitFor();
     assert.equal(await page.getByRole('button', { name: '交给 AI 继续', exact: true }).count(), 0);
-    assert.equal(await page.getByRole('button', { name: '停止', exact: true }).isVisible(), true);
+    assert.equal(await page.locator('.stop-action').first().isVisible(), true);
     const modelOptions: NonNullable<Snapshot['modelOptions']> = [
       { connectionId: 'official', connectionName: '官方', modelId: 'reasoner', modelName: 'Reasoner', thinkingLevels: [{ id: 'off', label: '关闭' }, { id: 'high', label: '高' }], defaultThinkingLevel: 'high' },
       { connectionId: 'company', connectionName: '公司', modelId: 'reasoner', modelName: 'Reasoner', thinkingLevels: [], defaultThinkingLevel: '' },
@@ -456,7 +456,7 @@ test('bundled UI renders streaming content, preserves expansion and reading posi
     await page.getByRole('textbox', { name: '消息', exact: true }).fill('正在写的草稿');
     assert.equal(await page.locator('.composer').getByRole('button', { name: '加入队列', exact: true }).isDisabled(), true);
     assert.equal(await page.locator('.composer .queued-steer').count(), 0);
-    await page.locator('.global-execution').getByRole('button', { name: '停止', exact: true }).click();
+    await page.locator('.global-execution').getByRole('button', { name: '停止任务', exact: true }).click();
     assert.equal(await page.getByRole('textbox', { name: '消息', exact: true }).inputValue(), '正在写的草稿', 'STOP does not clear drafts');
     await publish(page, { ...queuedControls, revision: 140 });
     await page.locator('.composer').getByRole('button', { name: '加入队列', exact: true }).click();

@@ -58,7 +58,7 @@ class AppCoordinator(context: Context, private val onEvent: (JSONObject) -> Unit
     private var priorPromptEnvironment = ""
     private val token = ByteArray(32).also { SecureRandom().nextBytes(it) }
         .joinToString("") { "%02x".format(it) }
-    private val bridge = PhoneHttpBridge(token, phone, { operation, generation ->
+    private val bridge = PhoneHttpBridge(token, phone, app.getString(R.string.resume_from_app), { operation, generation ->
         check(valid(generation)) { "执行会话已失效" }
         val gui = operation !in setOf("列出应用", "列出屏幕", "__system")
         val created = gui && resourceState != "ready"
@@ -599,6 +599,7 @@ class AppCoordinator(context: Context, private val onEvent: (JSONObject) -> Unit
 private class PhoneHttpBridge(
     @Volatile private var token: String,
     private val device: PhoneDevice,
+    private val resumeFromApp: String,
     private val prepare: (String, Long) -> Unit,
     private val event: (JSONObject) -> Unit
 ) : NanoHTTPD("127.0.0.1", 0) {
@@ -676,7 +677,7 @@ private class PhoneHttpBridge(
                 "/stop" -> synchronized(authLock) {
                     require(MessageDigest.isEqual(supplied.toByteArray(), "Bearer $token".toByteArray())) { "执行会话已失效" }
                     // Re-enabling input is a UI operation, never a network cancellation side effect.
-                    if (!body.optBoolean("stopped", true)) throw IllegalArgumentException("请从 BBUI 界面恢复执行")
+                    if (!body.optBoolean("stopped", true)) throw IllegalArgumentException(resumeFromApp)
                     if (body.optString("source") == "transport") {
                         inputQuarantined = true
                         device.quarantineInput("调用传输中断，原动作派发情况待确认")

@@ -80,7 +80,7 @@ class ShizukuPhoneDevice(context: Context, private val useTestTarget: Boolean = 
         }
         release()
         check(DevicePermission.available()) { "Shizuku 未启动，请先启动 Shizuku 服务" }
-        check(DevicePermission.granted()) { "请授予 BBUI Shizuku 权限后重新连接" }
+        check(DevicePermission.granted()) { context.getString(R.string.shizuku_permission_required, context.packageManager.getApplicationLabel(context.applicationInfo)) }
         check(Shizuku.getUid() == 2000) { "仅支持 Shizuku adb UID 2000" }
         closed.set(false); stopped.set(true)
         val epoch = connectionEpoch.incrementAndGet()
@@ -162,7 +162,7 @@ class ShizukuPhoneDevice(context: Context, private val useTestTarget: Boolean = 
                 })
                 .also { it.start(); it.attach(previewSurface, previewWidth, previewHeight) }
             val ownPackage = context.packageName
-            check(ownPackage == "io.bbui.assistant") { "未知的 BBUI 应用包名" }
+            check(ownPackage == "io.bbui.assistant") { "未知的应用包名" }
             val debugTarget = ComponentName(ownPackage, "$ownPackage.TestTargetActivity")
             @Suppress("DEPRECATION")
             val hasDebugTarget = runCatching { context.packageManager.getActivityInfo(debugTarget, 0) }.isSuccess

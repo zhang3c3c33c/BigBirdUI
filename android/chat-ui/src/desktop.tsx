@@ -5,6 +5,7 @@ import { initialSnapshot, post, type Snapshot } from './contract';
 import './desktop.css';
 import { semanticKey } from './input';
 import { BrandMark } from './brand';
+import { FULL_NAME, STOP_LABEL } from './branding';
 
 declare global { interface Window { Desktop: { invoke(operation: string, params?: unknown): Promise<any> } } }
 type Frame = { frameId: string; screen: string; width: number; height: number; image: string; deviceId?: string; receivedAt?: number };
@@ -49,7 +50,7 @@ function Welcome({ snapshot, settings, start }: { snapshot: DesktopSnapshot; set
   const connected = snapshot.desktop?.connected === true, configured = snapshot.desktop?.configured === true;
   return <main className="desktop-welcome" aria-label="首次使用设置"><section className="welcome-setup">
     <BrandMark className="setup-mark" />
-    <h1>开始使用 BBUI</h1>
+    <h1>{FULL_NAME}</h1>
     <div className="setup-card"><div><h2>手机控制</h2><p role="status">{connectionHelp(snapshot)}</p>
       {!connected && isIos(snapshot) && snapshot.desktop?.connectionStatus?.code === 'driver_missing' && <p>{appleDevicesHelp}</p>}</div>
       <button onClick={() => settings('device')}>连接手机</button>
@@ -58,7 +59,7 @@ function Welcome({ snapshot, settings, start }: { snapshot: DesktopSnapshot; set
       <button onClick={() => settings('models')}>{configured ? '管理模型' : '添加模型'}</button>
     </div>
     {(snapshot.isRunning || ['manual', 'taking_over', 'resuming'].includes(snapshot.control?.mode ?? ''))
-      && <button className="setup-stop" onClick={() => post({ type: 'stop' })}>停止任务</button>}
+      && <button className="setup-stop" onClick={() => post({ type: 'stop' })}>{STOP_LABEL}</button>}
     <footer><p>手机操作在本地执行。任务文字和必要截图会发送至所选模型 API。</p>
       <button className="setup-start" disabled={!connected || !configured} onClick={start}>开始使用</button></footer>
   </section></main>;

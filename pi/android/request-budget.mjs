@@ -19,7 +19,7 @@ export function budgetedFetch(fetchImpl, baseUrl, limit = REQUEST_BUDGET_BYTES) 
         // Return a non-retryable API response. Throwing would become a retryable
         // SDK connection error. No request or phone operation has been sent.
         return new Response(JSON.stringify({ error: { type: 'invalid_request_error',
-          code: 'bbui_request_budget', message: `BBUI 本地请求预算超限（${bytes} / ${limit} 字节）。已保留历史与执行结果；未发送本次模型请求，禁止重放手机动作。` } }),
+          code: 'bbui_request_budget', message: `大鸟手机助手本地请求预算超限（${bytes} / ${limit} 字节）。已保留历史与执行结果；未发送本次模型请求，禁止重放手机动作。` } }),
         { status: 413, headers: { 'content-type': 'application/json', 'x-bbui-local-error': 'request-budget' } });
       }
     }

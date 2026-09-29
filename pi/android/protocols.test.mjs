@@ -68,7 +68,7 @@ test('three real Pi adapters: routing, image serialization, streamed tool call a
       assert.equal(final.content.filter(block => block.type === 'text').map(block => block.text).join(''), answer);
       const blocked = await runtime.completeSimple(model, { messages: [{ role: 'user', content: '中'.repeat(5000), timestamp: 3 }] }, options);
       assert.equal(blocked.stopReason, 'error');
-      assert.match(blocked.errorMessage, /BBUI 本地请求预算超限/);
+      assert.match(blocked.errorMessage, /大鸟手机助手本地请求预算超限/);
       assert.equal(count, 2, 'oversized request must never reach the server');
     }
   } finally {

@@ -10,7 +10,7 @@ class WorkspaceActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(TextView(this).apply {
-            text = "BBUI"
+            text = getString(R.string.app_name)
             textSize = 22f
             gravity = Gravity.CENTER
             setTextColor(UiStyle.muted)

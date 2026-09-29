@@ -129,10 +129,10 @@ class AssistantService : Service() {
         val stop = PendingIntent.getService(this, 1, Intent(this, AssistantService::class.java).setAction(STOP), PendingIntent.FLAG_IMMUTABLE)
         val notification = Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_bbui_notification)
-            .setContentTitle("BBUI 手机助手")
+            .setContentTitle(getString(R.string.app_name))
             .setContentText("执行服务已启动，可随时停止")
             .setContentIntent(open).setOngoing(true)
-            .addAction(Notification.Action.Builder(null, "停止", stop).build()).build()
+            .addAction(Notification.Action.Builder(null, getString(R.string.stop_task), stop).build()).build()
         if (Build.VERSION.SDK_INT >= 34) startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         else startForeground(1, notification)
         coordinator = AppCoordinator(this) { event ->
