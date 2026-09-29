@@ -27,7 +27,7 @@ try {
   await page.screenshot({ path: path.join(data, 'window.png') });
   await page.getByRole('button', { name: '添加模型', exact: true }).click();
   await page.getByRole('dialog', { name: '设置' }).waitFor();
-  await page.getByRole('button', { name: '模型', exact: true }).click();
+  await page.getByRole('button', { name: '模型与 API', exact: true }).click();
   await page.getByRole('button', { name: '添加连接', exact: true }).click();
   await page.getByLabel('名称', { exact: true }).fill('本地模拟');
   await page.getByLabel('配置预设', { exact: true }).selectOption('openrouter');

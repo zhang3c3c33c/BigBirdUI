@@ -185,21 +185,11 @@ class AssistantService : Service() {
         sessions.command(command)
         syncOverlayPreference(refreshTool = false)
     }
-    private fun diagnosticsIdle(): Boolean = !coordinator.isBusy() && sessions.state.running == null && sessions.state.continuation == null && sessions.state.queue.isEmpty() && sessions.state.controlMode !in setOf("manual", "taking_over", "resuming")
-    fun runDiagnostic(action: String): Boolean {
-        if (!diagnosticsIdle()) return false
-        when (action) {
-            "connect" -> coordinator.connect()
-            "mock" -> coordinator.runRuntimeGate(JSONObject())
-            "close" -> stopSelf()
-            else -> return false
-        }
-        return true
-    }
+    private fun canProbeModel(): Boolean = !coordinator.isBusy() && sessions.state.running == null && sessions.state.continuation == null && sessions.state.queue.isEmpty() && sessions.state.controlMode !in setOf("manual", "taking_over", "resuming")
     fun memoryCommand(command: JSONObject, done: (JSONObject) -> Unit) = coordinator.memoryCommand(command, done)
 
     fun probeModel(connectionId: String, modelId: String, callback: (JSONObject) -> Unit) {
-        if (!diagnosticsIdle()) { callback(JSONObject().put("ok", false).put("message", "任务或人工操作尚未结束")); return }
+        if (!canProbeModel()) { callback(JSONObject().put("ok", false).put("message", "任务或人工操作尚未结束")); return }
         val store = SettingsStore(this)
         val config = runCatching { store.resolve(store.binding(JSONObject().put("connectionId", connectionId).put("modelId", modelId).put("thinkingLevel", ""))) }
             .getOrElse { callback(JSONObject().put("ok", false).put("message", "模型配置不可用")); return }

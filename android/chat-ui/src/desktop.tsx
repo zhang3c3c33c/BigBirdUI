@@ -352,7 +352,7 @@ function Settings({ close, snapshot, initialTab = 'device' }: { close(): void; s
   const update = (change: any) => setValue((previous: any) => ({ ...previous, ...change }));
   if (!value) return <div className="settings-backdrop"><section className="settings"><button onClick={close}>关闭</button><p>{message || '正在载入设置…'}</p></section></div>;
   return <div className="settings-backdrop"><section className="settings" role="dialog" aria-label="设置"><header><h2>设置</h2><button onClick={close}>完成</button></header>
-    <nav>{[['device', '设备'], ['models', '模型'], ['search', '搜索'], ['memory', '记忆']].map(([key, name]) => <button aria-pressed={tab === key} key={key} onClick={() => setTab(key)}>{name}</button>)}</nav>
+    <nav>{[['device', '设备'], ['models', '模型与 API'], ['search', '联网搜索'], ['memory', '用户记忆']].map(([key, name]) => <button aria-pressed={tab === key} key={key} onClick={() => setTab(key)}>{name}</button>)}</nav>
     <div className="settings-body">
     {tab === 'device' && <DeviceConnection snapshot={snapshot} saved={value} connected={update} />}
     {tab === 'models' && <>{value.connections.map((c: any, index: number) => {

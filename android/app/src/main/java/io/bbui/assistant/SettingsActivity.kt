@@ -25,8 +25,6 @@ class SettingsDraft : ViewModel() {
     var probing = false
     var probeResult = ""
     val probeChanged = MutableLiveData(Unit)
-    var diagnosticAction = ""
-    var diagnosticStatus = ""
     var discovering = false
     var discoveryError = ""
     var discovered = emptyList<DiscoveredModel>()
@@ -80,7 +78,6 @@ class SettingsActivity : AppCompatActivity() {
     private var service: AssistantService? = null
     private var bound = false
     private var pendingChanges = false
-    private var receivingLiveEvents = false
     private var probeButton: Button? = null
     private var probeResultView: TextView? = null
     private var permissionWasReady = false
@@ -99,29 +96,10 @@ class SettingsActivity : AppCompatActivity() {
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
             service = (binder as AssistantService.LocalBinder).service
             if (pendingChanges) changed()
-            receivingLiveEvents = false
-            service?.subscribe(diagnosticListener)
-            receivingLiveEvents = true
             if (page == "memory" && draft.memoryContent == null && !draft.memoryBusy) loadMemory()
-            if (draft.diagnosticAction.isNotBlank() && service?.coordinator?.isBusy() == false) {
-                draft.diagnosticAction = ""; draft.diagnosticStatus = "本地诊断已结束"
-                if (page == "help") render()
-            }
         }
         override fun onServiceDisconnected(name: ComponentName) { service = null }
     }
-    private val diagnosticListener: (JSONObject) -> Unit = { event ->
-        if (receivingLiveEvents && ::draft.isInitialized && draft.diagnosticAction.isNotBlank()) {
-            val status = event.optString("status")
-            val accepted = if (draft.diagnosticAction == "connect") setOf("connecting", "connected", "error") else setOf("starting", "running", "passed", "error")
-            if ((draft.diagnosticAction == "mock" && event.optString("type") == "runtime_gate_result") || status in accepted) {
-                draft.diagnosticStatus = event.optString("message")
-                if (status in setOf("connected", "passed", "error") || event.optString("type") == "runtime_gate_result") draft.diagnosticAction = ""
-                (supportFragmentManager.findFragmentById(BODY_ID) as? SettingsPreferences)?.findPreference<Preference>("diagnostic_status")?.summary = draft.diagnosticStatus
-            }
-        }
-    }
-    internal val diagnosticStatus get() = draft.diagnosticStatus
     internal val store get() = SettingsStore(this)
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
@@ -190,7 +168,7 @@ class SettingsActivity : AppCompatActivity() {
     private fun discard() { draft.cancelDiscovery(); draft.connection?.remove("apiKey"); draft.connection = null; draft.original = ""; open("models") }
     private fun render() {
         probeButton = null; probeResultView = null
-        titleView.text = when (page) { "models" -> "模型与 API"; "connection" -> "编辑连接"; "model" -> "编辑模型"; "discover" -> "选择模型"; "search" -> "联网搜索"; "memory" -> "用户记忆"; "permissions" -> "手机权限"; "ui" -> "界面"; "help" -> "帮助与诊断"; else -> "设置" }
+        titleView.text = when (page) { "models" -> "模型与 API"; "connection" -> "编辑连接"; "model" -> "编辑模型"; "discover" -> "选择模型"; "search" -> "联网搜索"; "memory" -> "用户记忆"; "permissions" -> "手机权限"; "ui" -> "界面"; else -> "设置" }
         if (page in setOf("connection", "model", "discover", "search", "memory")) {
             supportFragmentManager.findFragmentById(BODY_ID)?.let { supportFragmentManager.beginTransaction().remove(it).commitNow() }
             body.removeAllViews()
@@ -451,12 +429,6 @@ class SettingsActivity : AppCompatActivity() {
             val choice = choices.getJSONObject(index); store.setDefaultSelection(choice.getString("connectionId"), choice.getString("modelId")); changed(); render()
         } }.show()
     }
-    internal fun diagnostic(action: String) = safely {
-        check(checkNotNull(service) { "执行服务尚未连接" }.runDiagnostic(action)) { "当前有执行、接管或等待任务，诊断暂不可用" }
-        draft.diagnosticAction = action
-        draft.diagnosticStatus = if (action == "mock") "正在运行本地模拟测试" else "正在连接设备"
-        render()
-    }
     internal fun confirm(title: String, label: String, message: String? = null, action: () -> Unit) {
         androidx.appcompat.app.AlertDialog.Builder(this).setTitle(title).apply { if (message != null) setMessage(message) }
             .setNegativeButton("取消", null).setPositiveButton(label) { _, _ -> safely(action) }.show()
@@ -472,7 +444,7 @@ class SettingsActivity : AppCompatActivity() {
         if (draft.original.isNotBlank()) out.putString("original", JSONObject(draft.original).apply { remove("apiKey") }.toString())
         super.onSaveInstanceState(out)
     }
-    override fun onDestroy() { permissionMonitor.close(); service?.unsubscribe(diagnosticListener); if (bound) unbindService(connection); service = null; super.onDestroy() }
+    override fun onDestroy() { permissionMonitor.close(); if (bound) unbindService(connection); service = null; super.onDestroy() }
     private fun dp(value: Int) = UiStyle.dp(this, value)
     companion object { private const val BODY_ID = 0x0bb0001 }
 }
@@ -507,26 +479,12 @@ class SettingsPreferences : PreferenceFragmentCompat() {
                     }
                 })
             }
-            "help" -> {
-                row("使用引导") { startActivity(Intent(host, OnboardingActivity::class.java)) }
-                row("版本", BuildConfig.VERSION_NAME)
-                row("执行画面", "1080 × 2160 · 480 dpi · 18:9")
-                row("截图传输", "自动压缩 · 保持像素尺寸")
-                row("数据发送", "会话和记忆保存在本机。所选模型 API 接收对话、相关记忆及工具结果；联网搜索向选定供应商发送查询，网页读取访问目标网站。")
-                if (host.diagnosticStatus.isNotBlank()) preferenceScreen.addPreference(Preference(requireContext()).apply {
-                    key = "diagnostic_status"; title = "本地诊断"; summary = host.diagnosticStatus; isIconSpaceReserved = false; isSelectable = false
-                })
-                row("连接设备") { host.diagnostic("connect") }
-                row("本地模拟测试") { host.diagnostic("mock") }
-                row("开源组件", "Pi · assistant-ui · React · scrcpy · Shizuku · AndroidX\npi-web-access 0.32.0 · pi-memory 0.4.2 · pi-ask-user-question 0.1.1")
-            }
             else -> {
                 row("模型与 API", "${host.savedConnections().size} 个连接") { host.open("models") }
                 row("联网搜索") { host.open("search") }
                 row("用户记忆") { host.open("memory") }
                 row("手机权限", if (DevicePermission.granted()) "Shizuku 已授权" else "Shizuku 未就绪") { host.open("permissions") }
                 row("界面") { host.open("ui") }
-                row("帮助与诊断") { host.open("help") }
             }
         }
     }

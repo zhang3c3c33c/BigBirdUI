@@ -52,7 +52,7 @@
 以 **DeepSeek 开放平台**为例，使用支持图片输入的 [deepseek-flash](https://api-docs.deepseek.com/guides/vision/)：
 
 1. 登录 [DeepSeek 开放平台](https://platform.deepseek.com/api_keys)，创建并复制 API Key，确认账户有可用余额。
-2. 安卓进入“设置 → 模型与 API → 添加连接”，选择“使用配置预设 → DeepSeek”；电脑端进入“设置 → 模型 → 添加连接”，配置预设选择“DeepSeek”。按下表填写，并添加模型。
+2. 安卓进入“设置 → 模型与 API → 添加连接”，选择“使用配置预设 → DeepSeek”；电脑端进入“设置 → 模型与 API → 添加连接”，配置预设选择“DeepSeek”。按下表填写，并添加模型。
 
 | 设置项 | 填写内容 |
 | --- | --- |
@@ -71,7 +71,7 @@
 
 1. 登录百度智能云，按 [百度 AI 搜索官方指南](https://cloud.baidu.com/doc/BAIDU_AI_SEARCH/index.html)开通“百度搜索”服务。
 2. 在控制台的“API Key”中创建密钥，配置搜索服务所需权限并复制完整密钥，详见 [密钥创建说明](https://ai.baidu.com/ai-doc/AppBuilder/lm68r8e6i)。
-3. 打开大鸟：安卓进入“设置 → 联网搜索”，电脑端进入“设置 → 搜索”。供应商选择“百度 AI 搜索”，粘贴密钥，点击“保存”或“保存设置”。
+3. 打开大鸟，进入“设置 → 联网搜索”。供应商选择“百度 AI 搜索”，粘贴密钥，点击“保存”或“保存设置”。
 4. 回到对话，发送“联网搜索 Shizuku 的官方使用教程，并给出来源链接”，查看搜索结果和来源。
 
 ## 开发与反馈
