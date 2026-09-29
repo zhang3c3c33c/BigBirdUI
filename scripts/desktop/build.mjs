@@ -93,6 +93,12 @@ if (!existsSync(pyMarker) || await readFile(pyMarker, 'utf8') !== pyHash) {
 }
 run(path.join(python, 'python.exe'), ['-c', 'from pymobiledevice3.services.afc import AfcService; from pymobiledevice3.remote.userspace_tunnel import UserspaceRsdTunnel; from pymobiledevice3.remote.core_device.hid_service import UniversalHIDServiceService']);
 await cp(path.join(root, 'bbui'), path.join(app, 'source/bbui'), { recursive: true, filter: source => !source.includes('__pycache__') });
+run(hostPython, [path.join(root, 'scripts/desktop/prepare-ddi.py')]);
+const ddi = JSON.parse(execFileSync(hostPython, ['-c', 'import json; from bbui.ios_ddi import DDI_BUILD, DDI_HASHES; print(json.dumps({"build": DDI_BUILD, "files": DDI_HASHES}))'], { cwd: root, encoding: 'utf8' }));
+await mkdir(path.join(app, 'assets/vendor/ios-ddi'), { recursive: true });
+for (const name of Object.keys(ddi.files)) {
+  await copyFile(path.join(root, 'vendor/ios-ddi', name), path.join(app, 'assets/vendor/ios-ddi', name));
+}
 await cp(path.join(root, 'vendor/scrcpy/scrcpy-win64-v4.1'), path.join(app, 'assets/vendor/scrcpy/scrcpy-win64-v4.1'), { recursive: true });
 await copyFile(path.join(root, 'vendor/scrcpy/scrcpy-server-v4.1'), path.join(app, 'assets/vendor/scrcpy/scrcpy-server-v4.1'));
 await copyFile(path.join(root, 'vendor/scrcpy/LICENSE'), path.join(app, 'assets/vendor/scrcpy/LICENSE'));
@@ -101,12 +107,22 @@ if (!existsSync(agent)) throw new Error('Build :desktop-agent:assembleDebug firs
 await copyFile(agent, path.join(app, 'assets/vendor/desktop-agent.jar'));
 const manifest = { version: 1, platform: 'win32', arch: 'x64', dataVersion: 1, node: process.version,
   python: execFileSync(hostPython, ['--version'], { encoding: 'utf8' }).trim(), pi: '0.87.0', scrcpy: '4.1',
-  ios: { transport: 'usb', preview: 'screenshots', previewTargetFps: 15, pymobiledevice3: '9.34.0', pmdPytcp: '0.0.6', pytunPmd3: '3.0.3' },
+  ios: { transport: 'usb', preview: 'screenshots', previewTargetFps: 15, pymobiledevice3: '9.34.0', pmdPytcp: '0.0.6', pytunPmd3: '3.0.3',
+    ddi },
   nodeLockSha256: sha(lock), pythonLockSha256: pyHash,
   paths: { icon: 'brand.ico', node: 'node/node.exe', pi: 'runtime', python: 'python/python.exe', pythonSource: 'source',
     assets: 'assets', adb: 'assets/vendor/scrcpy/scrcpy-win64-v4.1/adb.exe' },
   hashes: { androidAgent: sha(await readFile(agent)), node: sha(await readFile(process.execPath)) } };
 await writeFile(path.join(app, 'runtime-manifest.json'), JSON.stringify(manifest, null, 2));
+// Catch incomplete cached dependencies before distributing an offline-ready package.
+for (const file of ['node/node.exe', 'python/python.exe',
+  'python/Lib/site-packages/uiautomator2/assets/u2.jar', 'python/Lib/site-packages/uiautomator2/assets/app-uiautomator.apk',
+  'assets/vendor/scrcpy/scrcpy-win64-v4.1/adb.exe', 'assets/vendor/scrcpy/scrcpy-win64-v4.1/AdbWinApi.dll',
+  'assets/vendor/scrcpy/scrcpy-win64-v4.1/AdbWinUsbApi.dll', 'assets/vendor/scrcpy/scrcpy-win64-v4.1/scrcpy.exe',
+  'assets/vendor/scrcpy/scrcpy-server-v4.1', 'assets/vendor/desktop-agent.jar',
+  'runtime/node_modules/@earendil-works/pi-coding-agent/dist/bundle/rpc-entry.js']) {
+  if (!existsSync(path.join(app, file))) throw new Error(`Missing bundled dependency: ${file}`);
+}
 const notices = [];
 async function collectNotices(directory, copyLicenses = false) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {

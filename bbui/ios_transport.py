@@ -16,6 +16,8 @@ from contextlib import AsyncExitStack, suppress, contextmanager
 from functools import wraps
 from pathlib import Path, PurePosixPath
 
+from .ios_ddi import bundled_ddi, validate_ddi
+
 CLEANUP_TIMEOUT = 25
 SERVICE_CLEANUP_TIMEOUT = 8
 LOCKDOWN_CLEANUP_TIMEOUT = 3
@@ -131,7 +133,7 @@ class IosTransport:
     async def connect(self):
         from pymobiledevice3 import usbmux, exceptions
         from pymobiledevice3.lockdown import create_using_usbmux
-        from pymobiledevice3.services.mobile_image_mounter import MobileImageMounterService, auto_mount_personalized
+        from pymobiledevice3.services.mobile_image_mounter import MobileImageMounterService
         from pymobiledevice3.remote.userspace_tunnel import UserspaceRsdTunnel
         from pymobiledevice3.remote.core_device.hid_service import UniversalHIDServiceService
         from pymobiledevice3.services.dvt.instruments.dvt_provider import DvtProvider
@@ -155,12 +157,8 @@ class IosTransport:
             async with MobileImageMounterService(lockdown=lockdown) as mounter:
                 mounted = await mounter.is_image_mounted('Personalized')
             if not mounted:
-                self.status('preparing_support', '正在准备 Apple 开发者支持文件，首次可能需要联网')
-                try:
-                    await asyncio.wait_for(auto_mount_personalized(lockdown), 180)
-                    self.mounted = True
-                except exceptions.AlreadyMountedError:
-                    pass  # Another developer client mounted it; do not claim ownership.
+                self.status('preparing_support', '正在准备 iPhone 连接')
+                await asyncio.wait_for(self._mount_support(lockdown), 180)
         except exceptions.PasswordRequiredError as error:
             raise ConnectionFailure('device_locked', '请解锁 iPhone') from error
         except exceptions.PairingError as error:
@@ -185,6 +183,20 @@ class IosTransport:
         except BaseException:
             await self.close()
             raise
+
+    async def _mount_support(self, lockdown):
+        from pymobiledevice3.exceptions import AlreadyMountedError
+        from pymobiledevice3.services.mobile_image_mounter import PersonalizedImageMounter
+        try:
+            files = validate_ddi(bundled_ddi())
+        except (OSError, ValueError) as error:
+            raise ConnectionFailure('support_files_missing', 'iPhone 支持文件缺失或损坏，请重新解压完整 Windows 安装包') from error
+        try:
+            async with PersonalizedImageMounter(lockdown=lockdown) as mounter:
+                await mounter.mount(*files)
+                self.mounted = True
+        except AlreadyMountedError:
+            pass  # Another developer client mounted it; do not claim ownership.
 
     @traced_async('transport.screenshot')
     async def screenshot(self):

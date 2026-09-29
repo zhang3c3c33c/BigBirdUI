@@ -12,6 +12,22 @@ await mkdir(workspace, { recursive: true });
 // Resolve only dependencies shipped in the exact APK ZIP, outside the repository.
 const home = await mkdtemp(path.join(tmpdir(), 'bbui-isolated-host-gate-'));
 const stage = path.join(home, 'payload');
+// Exercise the shipped runtime with internet access forbidden and a local model fixture.
+const offlineGuard = path.join(home, 'loopback-only.cjs');
+await writeFile(offlineGuard, `
+const net = require('node:net');
+const connect = net.Socket.prototype.connect;
+net.Socket.prototype.connect = function (...args) {
+  const options = net._normalizeArgs(args)[0];
+  const host = options.host || 'localhost';
+  if (!options.path && !['localhost', '127.0.0.1', '::1'].includes(host)) {
+    process.stderr.write('Unexpected internet connection: ' + host + '\\n');
+    process.exit(97);
+  }
+  return connect.apply(this, args);
+};
+require('node:module').syncBuiltinESMExports();
+`);
 const unpack = spawnSync(process.env.BBUI_PYTHON_HOST || 'python', ['-c',
   'import sys,zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])',
   path.join(root, 'android/runtime/build/generated/runtime-assets/pi-runtime.zip'), stage], { windowsHide: true });
@@ -169,7 +185,7 @@ async function run(marker, gate, restore, targetSessionId) {
   await writeFile(config, JSON.stringify({ bridgeUrl: base, bridgeToken: token, gate, sessionId: targetSessionId,
     baseUrl: `${base}/v1`, apiKey: token, provider: 'deepseek', model: 'deepseek-flash',
     api: 'openai-completions', ...(restore ? {thinkingLevel: 'low'} : {}) }));
-  const child = spawn(process.execPath, [path.join(stage, 'bootstrap.mjs'), config], {
+  const child = spawn(process.execPath, ['--require', offlineGuard, path.join(stage, 'bootstrap.mjs'), config], {
     cwd: stage, env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '', PI_CODING_AGENT_DIR: home },
     stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
   });
@@ -290,7 +306,7 @@ async function run(marker, gate, restore, targetSessionId) {
 }
 async function catalogGate() {
   await writeFile(config, JSON.stringify({ catalogOnly: true }));
-  const child = spawn(process.execPath, [path.join(stage, 'bootstrap.mjs'), config], {
+  const child = spawn(process.execPath, ['--require', offlineGuard, path.join(stage, 'bootstrap.mjs'), config], {
     cwd: stage, env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '', PI_CODING_AGENT_DIR: home },
     stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
   });

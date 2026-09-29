@@ -147,9 +147,7 @@ class IosDevice:
         self.thread = threading.Thread(target=self._run_loop, name='bbui-ios', daemon=True)
         self.thread.start()
         self.call(self._initialize(), timeout=5)
-        # Do not start preparation inside _initialize: an upstream synchronous
-        # first-time DDI download could run before its completion callback and
-        # make even the otherwise trivial constructor appear to time out.
+        # Keep USB preparation separate so construction returns before device I/O.
         self.connect_future = asyncio.run_coroutine_threadsafe(self._connect(), self.loop)
 
     def _run_loop(self):

@@ -43,6 +43,8 @@ npm run desktop:package
 
 生成便携包：`.desktop/releases/BigBirdUI-Windows-x64.zip`。
 
+Windows 构建会下载并校验固定版本的 iPhone DDI，随包内置。已有文件可放入 `vendor/ios-ddi/`：`Image.dmg`、`BuildManifest.plist`、`Image.trustcache`；版本与 SHA-256 见 `bbui/ios_ddi.py`。
+
 ## 测试
 
 ```powershell

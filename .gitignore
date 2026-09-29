@@ -9,6 +9,7 @@ node_modules/
 .pi/sessions/
 vendor/scrcpy/scrcpy-win64-v4.1/
 vendor/scrcpy/scrcpy-win64-v4.1.zip
+vendor/ios-ddi/
 android/.gradle/
 android/.cxx/
 android/**/.cxx/

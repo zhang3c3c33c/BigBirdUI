@@ -10,6 +10,8 @@ import { extensionManifest, desktopExtensionManifest } from './extensions-manife
 // Pi captures stdout's writer when taking ownership of RPC output. Install the
 // timestamp adapter first; Pi retains its original framing and backpressure.
 process.stdout.write = timedRpcWriter(process.stdout.write.bind(process.stdout));
+// App dependencies and extensions are bundled; only user-requested services go online.
+process.env.PI_OFFLINE = '1';
 
 let config = {};
 const fromEnvironment = Boolean(process.env.BBUI_BOOTSTRAP_CONFIG);

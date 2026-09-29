@@ -6,6 +6,7 @@ BigBirdUI 自有代码采用 [MIT](LICENSE)，第三方组件保留原版权与�
 | --- | --- |
 | Pi、聊天 UI、npm 依赖 | 根目录和 `android/chat-ui` 的 lockfile；包内许可索引 |
 | Python 与 iPhone 依赖 | `scripts/desktop/requirements.lock`；包内组件元数据 |
+| Apple 开发者磁盘映像（DDI） | Windows 包内 `assets/vendor/ios-ddi/`；[分发来源](https://github.com/doronz88/DeveloperDiskImage)，版本与校验见 `bbui/ios_ddi.py`；Apple 文件不适用本项目 MIT 许可 |
 | scrcpy | `vendor/scrcpy/LICENSE` |
 | Node / nodejs-mobile | 包内 Node 许可证 |
 | Android、Kotlin、Shizuku | Gradle 依赖声明及随包许可 |
