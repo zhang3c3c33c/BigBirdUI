@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { readFile, writeFile, mkdir, copyFile, cp } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, copyFile, cp, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -110,6 +110,28 @@ with zipfile.ZipFile(output,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=6
   info.compress_type=zipfile.ZIP_DEFLATED
   z.writestr(info,file.read_bytes())
 `, stage, path.join(output, 'pi-runtime.zip')]);
+// Vite bundles UI dependencies separately from Pi; retain their attribution too.
+const uiNotices = [];
+async function collectUiLicenses(directory) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+    const folder = path.join(directory, entry.name);
+    if (entry.name.startsWith('@')) { await collectUiLicenses(folder); continue; }
+    const manifest = path.join(folder, 'package.json');
+    if (existsSync(manifest)) {
+      const pkg = JSON.parse(await readFile(manifest, 'utf8'));
+      const destination = path.join(output, 'licenses/ui', pkg.name, pkg.version);
+      const files = (await readdir(folder)).filter(name => /^(licen[cs]e|copying|notice)/i.test(name));
+      await mkdir(destination, { recursive: true });
+      for (const file of files) await cp(path.join(folder, file), path.join(destination, file), { recursive: true });
+      uiNotices.push({ name: pkg.name, version: pkg.version, license: pkg.license,
+        directory: path.relative(output, destination).split(path.sep).join('/'), notices: files });
+    }
+    if (existsSync(path.join(folder, 'node_modules'))) await collectUiLicenses(path.join(folder, 'node_modules'));
+  }
+}
+await collectUiLicenses(path.join(root, 'android/chat-ui/node_modules'));
+await writeFile(path.join(output, 'licenses/ui-packages.json'), JSON.stringify(uiNotices, null, 2));
 const payload = await readFile(path.join(output, 'pi-runtime.zip'));
 await writeFile(path.join(output, 'runtime-manifest.json'), JSON.stringify({
   piVersion: '0.87.0', nodeVersion: version, nativeArchiveSha256: nativeHash,

@@ -1,6 +1,6 @@
 # 首次公开发布清单
 
-当前阶段：源码已公开。仓库为 [zhang3c3c33c/BigBirdUI](https://github.com/zhang3c3c33c/BigBirdUI)；维护者已确认 MIT 许可证，版权署名为 zhang3c3c33c。安装包发布另行验收。
+当前阶段：源码已公开。仓库为 [zhang3c3c33c/BigBirdUI](https://github.com/zhang3c3c33c/BigBirdUI)；维护者已确认 MIT 许可证，版权署名为 zhang3c3c33c。预览安装包发布见 [v0.1.0-preview.1](https://github.com/zhang3c3c33c/BigBirdUI/releases/tag/v0.1.0-preview.1)；正式签名版本仍需后续验收。
 
 ## 仓库内容
 
@@ -18,7 +18,7 @@
 - [x] 确定 GitHub 仓库名称、所有者和正式 URL，补充相关项目元数据与链接。
 - [x] 选定 MIT 许可证和版权署名，添加 `LICENSE`，同步包元数据及 Android / Windows 许可证打包步骤。
 - [x] 在 GitHub 启用私密漏洞报告，更新 `SECURITY.md` 和 Issue 联系入口。
-- [ ] 核对第三方组件与品牌资源的再分发条件；完成 APK / ZIP 的完整许可清单。
+- [x] 核对本次预览包的依赖声明，随 Release 提供许可清单与相关官方源码材料；第三方许可不由项目 MIT 替代。
 
 ## 构建与发布验证
 
@@ -28,8 +28,8 @@
 - [x] 修复首次 CI 发现的测试目录依赖后，确认 GitHub Actions 实际运行通过。
 - [ ] 独立验证 Android APK 与 Windows 便携包构建、启动、升级和退出。
 - [ ] 记录发布版本对应的真机型号、系统版本、模型 / 搜索测试范围及已知限制。
-- [ ] 按发布方式处理签名、校验和、版本号和发布说明；不能把调试 APK 或未签名 ZIP 标为已签名正式版本。
-- [ ] 发布附件只包含明确构建产物和许可材料，不上传工作目录、`runs/`、`.desktop/` 整体或本机设置。
+- [x] 首次发布使用 `v0.1.0-preview.1` 预览标签，明确 APK 为调试签名、Windows 未代码签名，提供校验和与发布说明。
+- [x] 发布附件限定为 APK、便携 ZIP、许可 / 对应源码材料、构建信息及校验和；不上传本机设置或测试记录。
 
 ## 提交前检查
 

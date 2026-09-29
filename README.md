@@ -6,7 +6,7 @@ BigBirdUI（大鸟手机助手，简称 BBUI）是一款帮你操作手机的 AI
 
 你可以直接在 Android 手机上使用，也可以在 Windows 电脑上连接手机。执行过程中能查看进展、补充要求，并随时停止或接管。
 
-> 当前为开发预览阶段，源码以 MIT 许可证开放，安装包仍处于发布准备阶段。任务表现取决于模型能力、设备与应用兼容性；已验证范围见 [验收记录](docs/README.md#历史验收记录)。
+> 当前为开发预览阶段，源码以 MIT 许可证开放，可从 [Releases](https://github.com/zhang3c3c33c/BigBirdUI/releases/tag/v0.1.0-preview.1) 下载 Android APK 和 Windows 便携包。任务表现取决于模型能力、设备与应用兼容性；已验证范围见 [验收记录](docs/README.md#历史验收记录)。
 
 ## 大鸟可以帮你做什么
 
@@ -39,7 +39,7 @@ Windows 桌面端可查看 Android 主屏并使用任务虚拟屏；Android 本�
 
 按设备选择一种方式：[Android 本机使用](#android-本机使用) · [电脑连接-Android](#电脑连接-android) · [电脑连接-iPhone](#电脑连接-iphone)。电脑端当前支持 Windows x64。
 
-当前尚未提供正式发布下载地址。以下步骤适用于已取得或自行构建的 APK / Windows 便携包；构建方法见下方“从源码构建”。现有程序与安装包仍使用简称 `BBUI`，Windows 启动文件为 `BBUI.exe`。
+下载入口：[v0.1.0-preview.1](https://github.com/zhang3c3c33c/BigBirdUI/releases/tag/v0.1.0-preview.1)。Android 请选择 `BigBirdUI-Android-arm64-debug.apk`，电脑请选择 `BBUI-Windows-x64.zip`。本版 APK 使用调试签名，Windows 程序未做代码签名，适合尝鲜与反馈；构建方法见下方“从源码构建”。现有程序与安装包仍使用简称 `BBUI`，Windows 启动文件为 `BBUI.exe`。
 
 ### Android 本机使用
 

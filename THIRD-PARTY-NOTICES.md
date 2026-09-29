@@ -15,3 +15,11 @@
 scrcpy 的来源地址与版本写在下载脚本中。Java 文件和协议文档为开发参考；不要把上游资源误标为 BBUI 原创代码。
 
 桌面构建生成 `.desktop/app/THIRD-PARTY-NOTICES.json`，记录 Node、Python、scrcpy、npm 及 UI 组件路径。它是构建产物的一部分，不应作为完整许可核查已完成的证明。发布 ZIP / APK 前，核对实际分发文件的许可证、NOTICE、归属和源代码提供要求，并确保项目级许可证一并进入发布材料。
+
+## v0.1.0-preview.1 附件
+
+首次预览版包含独立的 `THIRD-PARTY-LICENSES.zip`，汇总 npm、UI、Android 运行依赖的声明和随包许可，以及 Node、Python、Electron、scrcpy 与视频库许可。Android 清单来自实际解析的 71 个外部依赖。
+
+Windows 包中的 `pymobiledevice3 9.34.0` 及部分 iPhone 依赖声明为 GPL-3.0-or-later；FFmpeg / 编解码库以及部分 Python 包另有 LGPL、GPL 或 MPL 条款。项目根目录的 MIT 只适用于 BigBirdUI 自有代码，不能代替这些组件的许可证。完整包再分发需保留相应许可和源码材料。
+
+同版 Release 提供 `PYTHON-COMPONENT-SOURCES.zip`（17 个 Python 组件的官方源码发行包）及 `VIDEO-LIBRARY-SOURCES.zip`（14 个视频组件的官方源码归档、来源 / SHA-256 清单与上游构建资料）。源码归档按官方发布的哈希验证；BigBirdUI 的源码和构建脚本可从同版 Git 标签取得。第三方原作者的版权与许可证保持不变。
