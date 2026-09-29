@@ -1,3 +1,4 @@
+import { ModelCapabilities, mergeDiscoveredModels } from './model-settings';
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Chat, ErrorBoundary } from './main';
@@ -6,6 +7,7 @@ import './desktop.css';
 import { semanticKey } from './input';
 import { BrandMark } from './brand';
 import { FULL_NAME, STOP_LABEL } from './branding';
+import { providerPresets, selectedPreset, applyPreset } from './provider-presets';
 
 declare global { interface Window { Desktop: { invoke(operation: string, params?: unknown): Promise<any> } } }
 type Frame = { frameId: string; screen: string; width: number; height: number; image: string; deviceId?: string; receivedAt?: number };
@@ -346,7 +348,7 @@ function Settings({ close, snapshot, initialTab = 'device' }: { close(): void; s
   const [value, setValue] = useState<any>(null), [tab, setTab] = useState(initialTab), [message, setMessage] = useState('');
   const [memory, setMemory] = useState<any>(null);
   useEffect(() => { void call('settings').then(setValue).catch(e => setMessage(String(e))); }, []);
-  async function act(operation: string, params?: unknown) { try { const result = await call(operation, params); setMessage('已完成'); return result; } catch (e) { setMessage(String(e)); return null; } }
+  async function act(operation: string, params?: unknown) { setMessage('正在处理…'); try { const result = await call(operation, params); setMessage('已完成'); return result; } catch (e) { setMessage(String(e)); return null; } }
   const update = (change: any) => setValue((previous: any) => ({ ...previous, ...change }));
   if (!value) return <div className="settings-backdrop"><section className="settings"><button onClick={close}>关闭</button><p>{message || '正在载入设置…'}</p></section></div>;
   return <div className="settings-backdrop"><section className="settings" role="dialog" aria-label="设置"><header><h2>设置</h2><button onClick={close}>完成</button></header>
@@ -356,17 +358,22 @@ function Settings({ close, snapshot, initialTab = 'device' }: { close(): void; s
     {tab === 'models' && <>{value.connections.map((c: any, index: number) => {
       const change = (patch: any) => update({ connections: value.connections.map((item: any, i: number) => i === index ? { ...item, ...patch } : item) });
       return <fieldset key={c.id}><legend>{c.name || '模型连接'}</legend><label>名称<input value={c.name} onChange={e => change({ name: e.target.value })} /></label>
-        <label>供应商<select value={c.provider} onChange={e => change({ provider: e.target.value })}>{['bbui', 'openai', 'anthropic', 'deepseek'].map(p => <option key={p}>{p}</option>)}</select></label>
+        <label>配置预设<select aria-label="配置预设" value={selectedPreset(c)} onChange={e => change(applyPreset(c, e.target.value))}><option value="">自定义</option>{providerPresets.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
         <label>API 协议<select value={c.api} onChange={e => change({ api: e.target.value })}>{['openai-completions', 'openai-responses', 'anthropic-messages'].map(p => <option key={p}>{p}</option>)}</select></label>
         <label>API 地址<input value={c.baseUrl} onChange={e => change({ baseUrl: e.target.value })} /></label><label>API 密钥<input type="password" autoComplete="off" value={c.apiKey} placeholder={c.hasKey ? '已保存，留空沿用' : '填写密钥'} onChange={e => change({ apiKey: e.target.value })} /></label>
-        {c.models.map((m: any, n: number) => <div className="model-line" key={n}><input aria-label="模型 ID" value={m.id} onChange={e => change({ models: c.models.map((x: any, i: number) => i === n ? { ...x, id: e.target.value } : x) })} />
-          <label className="check"><input type="checkbox" checked={m.input?.includes('image')} onChange={e => change({ models: c.models.map((x: any, i: number) => i === n ? { ...x, input: e.target.checked ? ['text', 'image'] : ['text'] } : x) })} />视觉</label>
+        {c.models.map((m: any, n: number) => <div className="model-settings" key={n}><div className="model-line"><input aria-label="模型 ID" value={m.id} onChange={e => change({ models: c.models.map((x: any, i: number) => i === n ? { ...x, id: e.target.value } : x) })} />
           <button onClick={() => update({ defaultModel: { connectionId: c.id, modelId: m.id, thinkingLevel: '' } })}>{value.defaultModel?.connectionId === c.id && value.defaultModel?.modelId === m.id ? '默认' : '设为默认'}</button>
-          <button onClick={() => void act('probe', { connectionId: c.id, modelId: m.id }).then(r => r && setMessage(JSON.stringify(r)))}>测试</button></div>)}
-        <button onClick={() => change({ models: [...c.models, { id: '', input: ['text', 'image'] }] })}>添加模型</button>
-        <button onClick={async () => { const models = await act('discover', { connectionId: c.id }); if (models) change({ models: models.map((m: any) => ({ ...m, input: ['text'] })) }); }}>发现模型</button>
+          <button onClick={() => void act('probe', { connectionId: c.id, modelId: m.id }).then(r => r && setMessage(JSON.stringify(r)))}>测试</button></div>
+          <ModelCapabilities model={m} change={patch => change({ models: c.models.map((x: any, i: number) => i === n ? { ...x, ...patch } : x) })} /></div>)}
+        <button onClick={() => change({ models: [...c.models, { id: '' }] })}>添加模型</button>
+        <button onClick={async () => {
+          const models = await act('discover', { connectionId: c.id, api: c.api, baseUrl: c.baseUrl, apiKey: c.apiKey, clearApiKey: c.clearApiKey });
+          if (models) setValue((current: any) => ({ ...current, connections: current.connections.map((item: any) =>
+            item.id === c.id && item.api === c.api && item.baseUrl === c.baseUrl && item.apiKey === c.apiKey
+              ? { ...item, models: mergeDiscoveredModels(item.models, models) } : item) }));
+        }}>发现模型</button>
         <button onClick={() => update({ connections: value.connections.filter((_: any, i: number) => i !== index) })}>删除连接</button></fieldset>;
-    })}<button onClick={() => update({ connections: [...value.connections, { id: crypto.randomUUID(), name: '', provider: 'bbui', api: 'openai-completions', baseUrl: 'https://api.openai.com/v1', apiKey: '', models: [{ id: '', input: ['text', 'image'] }] }] })}>添加连接</button><p>先保存连接，再发现模型或测试。测试会向所选 API 发送一个短请求。</p></>}
+    })}<button onClick={() => update({ connections: [...value.connections, { id: crypto.randomUUID(), name: '', provider: 'bbui', api: 'openai-completions', baseUrl: '', apiKey: '', models: [] }] })}>添加连接</button><p>先保存连接，再发现模型或测试。测试会向所选 API 发送一个短请求。</p></>}
     {tab === 'search' && <><label>搜索供应商<select value={value.tools.search.provider} onChange={e => update({ tools: { search: { ...value.tools.search, provider: e.target.value } } })}><option value="">未配置</option><option value="bocha">博查</option><option value="baidu">百度 AI 搜索</option></select></label><label>API 密钥<input type="password" value={value.tools.search.apiKey} placeholder={value.tools.search.hasKey ? '已保存，留空沿用' : ''} onChange={e => update({ tools: { search: { ...value.tools.search, apiKey: e.target.value } } })} /></label></>}
     {tab === 'memory' && <><button onClick={async () => setMemory(await act('memory', { action: 'read' }))}>载入最新记忆</button>{memory && <><textarea className="memory-editor" value={memory.content} onChange={e => setMemory({ ...memory, content: e.target.value })} /><button onClick={async () => { const result = await act('memory', { action: 'write', ...memory }); if (result) setMemory(result); }}>保存记忆</button></>}</>}
     {tab === 'data' && <><p>数据独立保存在当前 Windows 用户目录。导入会复制原文件。</p><button onClick={() => void act('importSessions')}>导入 Pi 会话</button><button onClick={async () => { const result = await act('importConfig'); if (result) update(result); }}>导入旧设备配置</button><button onClick={() => void act('diagnostics').then(r => r && setMessage(JSON.stringify(r, null, 2)))}>查看诊断</button></>}

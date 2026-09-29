@@ -61,7 +61,6 @@ with zipfile.ZipFile(archive) as z:
  if not library.is_file() or library.read_bytes()!=content: library.write_bytes(content)
 `, archive, vendor, path.join(moduleDir, 'src/main/jniLibs/arm64-v8a')]);
 
-run(process.execPath, [path.join(root, 'scripts/android-runtime/model-catalog.mjs')]);
 const lock = await readFile(path.join(root, 'package-lock.json'));
 const lockHash = sha(lock);
 const marker = path.join(stage, '.dependencies-sha256');

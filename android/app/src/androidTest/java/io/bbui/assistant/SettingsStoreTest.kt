@@ -55,9 +55,7 @@ class SettingsStoreTest {
         assertFalse(store.modelOptions().toString().contains("fixture-secret"))
         assertFalse(store.modelOptions().toString().contains("fixture.invalid"))
         assertFalse(File(directory, "model.enc").readText().contains("fixture-secret"))
-        assertTrue(store.modelMetadata("deepseek", "openai-completions", "deepseek-flash").getBoolean("known"))
-        assertFalse(store.modelMetadata("custom", "openai-responses", "future-model").getBoolean("known"))
-        assertEquals(0, store.modelMetadata("custom", "openai-responses", "future-model").getJSONArray("thinkingLevels").length())
+        assertEquals(0, store.modelOptions().getJSONObject(0).getJSONArray("thinkingLevels").length())
     }
     @Test fun queueBindingRetainsRevisionAndDeletionFailsClosed() = withStore { store, _ ->
         store.save(config())

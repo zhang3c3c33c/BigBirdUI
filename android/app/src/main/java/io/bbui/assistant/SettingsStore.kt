@@ -78,7 +78,7 @@ class SettingsStore(private val context: Context) {
         if (existing == null) write(config) else {
             val selected = existing.optJSONObject("defaultSelection") ?: JSONObject()
             val model = JSONObject().put("id", config.optString("model")).put("name", config.optString("model"))
-            for (key in listOf("input", "reasoning", "contextWindow", "maxTokens")) if (config.has(key)) model.put(key, config.get(key))
+            for (key in listOf("input", "reasoning", "contextWindow", "maxTokens", "thinkingLevels", "thinkingMode")) if (config.has(key)) model.put(key, config.get(key))
             val connection = JSONObject(config.toString()).put("id", selected.optString("connectionId"))
                 .put("name", config.optString("name").ifBlank { config.optString("provider").ifBlank { "模型连接" } }).put("api", config.optString("api", "openai-completions"))
                 .put("models", JSONArray().put(model))
@@ -93,7 +93,7 @@ class SettingsStore(private val context: Context) {
         if (data.optString("model").isNotBlank()) {
             val id = UUID.randomUUID().toString()
             val model = JSONObject().put("id", data.getString("model")).put("name", data.getString("model"))
-            for (key in listOf("input", "reasoning", "contextWindow", "maxTokens")) if (data.has(key)) model.put(key, data.get(key))
+            for (key in listOf("input", "reasoning", "contextWindow", "maxTokens", "thinkingLevels", "thinkingMode")) if (data.has(key)) model.put(key, data.get(key))
             val connection = JSONObject(data.toString()).put("id", id).put("name", data.optString("provider", "已保存连接"))
                 .put("revision", 1).put("api", data.optString("api", "openai-completions")).put("models", JSONArray().put(model))
             registry.getJSONArray("connections").put(connection)
@@ -121,7 +121,12 @@ class SettingsStore(private val context: Context) {
         for (i in 0 until models.length()) require(models.getJSONObject(i).optString("id").isNotBlank() && ids.add(models.getJSONObject(i).getString("id"))) { "模型 ID 不能为空或重复" }
         for (i in 0 until models.length()) {
             val model = models.getJSONObject(i)
-            for (field in listOf("contextWindow", "maxTokens")) if (model.has(field)) require(model.optLong(field) > 0 && model.optLong(field) <= Int.MAX_VALUE) { "$field 必须为正整数" }
+            for (field in listOf("contextWindow", "maxTokens")) if (model.has(field)) require(model.opt(field) is Number && model.optDouble(field) == model.optLong(field).toDouble() && model.optLong(field) > 0 && model.optLong(field) <= Int.MAX_VALUE) { "$field 必须为正整数" }
+            if (model.has("reasoning")) require(model.opt("reasoning") is Boolean) { "思考能力设置无效" }
+            if (model.has("thinkingLevels")) {
+                val levels = model.getJSONArray("thinkingLevels")
+                require((0 until levels.length()).all { levels.getJSONObject(it).optString("id") in ModelSettings.levels }) { "思考档位设置无效" }
+            }
             if (model.has("input")) {
                 val input = model.getJSONArray("input")
                 require(input.length() > 0 && (0 until input.length()).all { input.optString(it) in setOf("text", "image") }) { "无效的模型输入类型" }
@@ -147,20 +152,15 @@ class SettingsStore(private val context: Context) {
         bindingFrom(registry, selection)
         write(read().put("registry", registry.put("defaultSelection", selection)))
     }
-    fun modelMetadata(provider: String, api: String, modelId: String): JSONObject {
-        val rows = synchronized(LOCK) { catalog ?: JSONArray(context.assets.open("model-catalog.json").bufferedReader().use { it.readText() }).also { catalog = it } }
-        for (i in 0 until rows.length()) rows.getJSONObject(i).let { if (it.optString("provider") == provider && it.optString("api") == api && it.optString("id") == modelId) return JSONObject(it.toString()) }
-        return JSONObject().put("known", false).put("source", "unknown").put("thinkingLevels", JSONArray()).put("defaultThinkingLevel", "")
-    }
     fun modelOptions(): JSONArray {
         val rows = registry().getJSONArray("connections"); val output = JSONArray()
         for (i in 0 until rows.length()) {
             val connection = rows.getJSONObject(i); val models = connection.getJSONArray("models")
             for (j in 0 until models.length()) {
-                val model = models.getJSONObject(j); val metadata = modelMetadata(connection.optString("provider"), connection.optString("api"), model.getString("id"))
+                val model = models.getJSONObject(j)
                 output.put(JSONObject().put("connectionId", connection.getString("id")).put("connectionName", connection.getString("name"))
                     .put("modelId", model.getString("id")).put("modelName", model.optString("name").ifBlank { model.getString("id") })
-                    .put("thinkingLevels", metadata.getJSONArray("thinkingLevels").takeIf { it.length() > 1 } ?: JSONArray()).put("defaultThinkingLevel", ""))
+                    .put("thinkingLevels", ModelSettings.thinkingLevels(model)).put("defaultThinkingLevel", ""))
             }
         }
         return output
@@ -182,10 +182,10 @@ class SettingsStore(private val context: Context) {
         val models = connection.getJSONArray("models")
         val model = (0 until models.length()).map { models.getJSONObject(it) }.firstOrNull { it.getString("id") == binding.getString("modelId") } ?: error("任务绑定的模型不可用")
         return JSONObject(connection.toString()).apply {
-            for (key in listOf("input", "reasoning", "contextWindow", "maxTokens")) remove(key)
+            for (key in listOf("input", "reasoning", "contextWindow", "maxTokens", "thinkingLevels", "thinkingMode")) remove(key)
             remove("models"); remove("registry"); put("model", model.getString("id")); put("thinkingLevel", binding.optString("thinkingLevel"))
-            for (key in listOf("input", "reasoning", "contextWindow", "maxTokens")) if (model.has(key)) put(key, model.get(key))
+            for (key in listOf("input", "reasoning", "contextWindow", "maxTokens", "thinkingLevels", "thinkingMode")) if (model.has(key)) put(key, model.get(key))
         }
     }
-    companion object { private var catalog: JSONArray? = null; private val LOCK = Any(); private val APIS = setOf("openai-completions", "openai-responses", "anthropic-messages"); private const val ALIAS = "bbui.model.config.v1" }
+    companion object { private val LOCK = Any(); private val APIS = setOf("openai-completions", "openai-responses", "anthropic-messages"); private const val ALIAS = "bbui.model.config.v1" }
 }

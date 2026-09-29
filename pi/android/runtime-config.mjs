@@ -1,44 +1,39 @@
-import { createRequire } from 'node:module';
-import { existsSync } from 'node:fs';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-
-// npm's production install nests pi-ai under coding-agent (the root pi-ai is
-// dev-only). Resolve from the owner package, not from this APK bootstrap file.
-const piRequire = createRequire(import.meta.resolve('@earendil-works/pi-coding-agent'));
-const catalogPath = piRequire.resolve.paths('@earendil-works/pi-ai')
-  .map(directory => path.join(directory, '@earendil-works/pi-ai/dist/providers/deepseek.models.js'))
-  .find(candidate => existsSync(candidate));
-if (!catalogPath) throw new Error('Bundled Pi DeepSeek model catalog is missing');
-const { DEEPSEEK_MODELS } = await import(pathToFileURL(catalogPath).href);
-const { OPENAI_MODELS } = await import(pathToFileURL(path.join(path.dirname(catalogPath), 'openai.models.js')).href);
-const { ANTHROPIC_MODELS } = await import(pathToFileURL(path.join(path.dirname(catalogPath), 'anthropic.models.js')).href);
-const catalogs = { deepseek: DEEPSEEK_MODELS, openai: OPENAI_MODELS, anthropic: ANTHROPIC_MODELS };
 export const SUPPORTED_APIS = ['openai-completions', 'openai-responses', 'anthropic-messages'];
+export const THINKING_LEVELS = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
 
-/** Known models retain Pi's capability and reasoning protocol metadata. */
+export function thinkingLevels(model) {
+  if (!model.reasoning) return [];
+  // Session controls use protocol-normalized request levels when the endpoint
+  // does not enumerate them. These are not a provider capability lookup.
+  return (model.thinkingLevels ?? ['off', 'minimal', 'low', 'medium', 'high'].map(id => ({ id, label: id })))
+    .filter(level => THINKING_LEVELS.includes(level.id));
+}
+
+export function validateModelSettings(model) {
+  for (const key of ['contextWindow', 'maxTokens']) if (model[key] != null && (!Number.isInteger(model[key]) || model[key] <= 0 || model[key] > 2147483647)) throw new Error('模型长度必须为正整数');
+  if (model.reasoning != null && typeof model.reasoning !== 'boolean') throw new Error('思考能力设置无效');
+  if (model.input != null && (!Array.isArray(model.input) || !model.input.length || model.input.some(type => !['text', 'image'].includes(type)))) throw new Error('模型输入类型无效');
+  if (model.thinkingLevels != null && (!Array.isArray(model.thinkingLevels) || model.thinkingLevels.some(level => !THINKING_LEVELS.includes(level?.id)))) throw new Error('思考档位设置无效');
+}
+
+/** Capabilities come only from saved model settings, never a provider catalog. */
 export function modelConfiguration(config) {
+  validateModelSettings(config);
   const provider = config.provider || 'bbui';
   const model = config.model || 'bbui-unconfigured';
-  const known = catalogs[provider]?.[model];
-  // Old custom configurations used Chat Completions, including provider=openai.
-  const api = config.api || (provider === 'deepseek' ? known?.api : undefined) || 'openai-completions';
-  if (!SUPPORTED_APIS.includes(api)) throw new Error(`不支持的 API 协议：${api}`);
-  const definition = {
-    baseUrl: config.baseUrl || known?.baseUrl || (api === 'anthropic-messages' ? 'https://api.anthropic.com' : 'https://api.openai.com/v1'),
-    apiKey: '$BBUI_MODEL_KEY',
-  };
-  if (known && api === known.api) {
-    // Let Pi retain all provider-specific metadata for the original protocol.
-    if (config.api) definition.api = api;
-  } else {
-    definition.api = api;
-    definition.models = [{ id: model, name: model, input: config.input ?? known?.input ?? ['text'],
-      reasoning: config.reasoning ?? known?.reasoning ?? false,
-      contextWindow: config.contextWindow || known?.contextWindow || 128000,
-      maxTokens: config.maxTokens || known?.maxTokens || 8192 }];
-  }
-  return { providers: { [provider]: definition } };
+  const api = config.api || 'openai-completions';
+  if (!SUPPORTED_APIS.includes(api)) throw new Error('不支持的 API 协议：' + api);
+  return { providers: { [provider]: {
+    baseUrl: config.baseUrl || (api === 'anthropic-messages' ? 'https://api.anthropic.com' : 'https://api.openai.com/v1'),
+    apiKey: '$BBUI_MODEL_KEY', api,
+    models: [{ id: model, name: model, input: config.input ?? ['text'], reasoning: config.reasoning ?? false,
+      contextWindow: config.contextWindow || 128000, maxTokens: config.maxTokens || 8192,
+      ...(api === 'anthropic-messages' && config.thinkingMode === 'adaptive' ? { compat: { forceAdaptiveThinking: true } } : {}),
+      // Keep the adapter's "off" encoding (e.g. OpenRouter's "none").
+      thinkingLevelMap: Object.fromEntries(THINKING_LEVELS.filter(id => id !== 'off' || !thinkingLevels(config).some(level => level.id === id))
+        .map(id => [id, thinkingLevels(config).some(level => level.id === id) ? id : null])),
+    }],
+  } } };
 }
 
 export function runtimeSettings(previous, provider, model) {
@@ -47,9 +42,6 @@ export function runtimeSettings(previous, provider, model) {
 }
 
 export async function validateThinkingLevel(config) {
-  if (!config.thinkingLevel) return;
-  const known = catalogs[config.provider]?.[config.model];
-  if (!known || known.api !== config.api) throw new Error('模型思考档位缺少可验证元数据');
-  const { getSupportedThinkingLevels } = await import(pathToFileURL(path.join(path.dirname(catalogPath), '../models.js')).href);
-  if (!getSupportedThinkingLevels(known).includes(config.thinkingLevel)) throw new Error('模型不支持该思考档位');
+  if (!config.thinkingLevel || (!config.reasoning && config.thinkingLevel === 'off')) return;
+  if (!thinkingLevels(config).some(level => level.id === config.thinkingLevel)) throw new Error('此模型未启用思考，或所选思考档位不可用');
 }

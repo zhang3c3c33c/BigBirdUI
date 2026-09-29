@@ -26,6 +26,10 @@ test('three real Pi adapters: routing, image serialization, streamed tool call a
       assert.equal(api === 'anthropic-messages' ? req.headers['x-api-key'] : req.headers.authorization,
         api === 'anthropic-messages' ? 'fixture-key' : 'Bearer fixture-key');
       assert.equal(body.stream, true);
+      if (api === 'anthropic-messages') {
+        assert.equal(body.thinking.type, 'adaptive');
+        assert.equal(body.output_config.effort, 'high');
+      }
       assert.ok(body.tools.length === 1);
       assert.ok(JSON.stringify(body).includes(pixel), 'real adapter includes the screenshot');
       if (count === 2) {
@@ -47,14 +51,16 @@ test('three real Pi adapters: routing, image serialization, streamed tool call a
     const dir = await mkdtemp(path.join(tmpdir(), 'bbui-protocols-'));
     for (api of SUPPORTED_APIS) {
       count = 0; failure = undefined;
-      const config = modelConfiguration({ provider: 'fixture', model: 'fixture', input: ['text', 'image'], api, baseUrl: api === 'anthropic-messages' ? root : `${root}/v1` });
+      const config = modelConfiguration({ provider: 'fixture', model: 'fixture', input: ['text', 'image'], api,
+        ...(api === 'anthropic-messages' ? { reasoning: true, thinkingMode: 'adaptive', thinkingLevels: [{ id: 'high', label: 'high' }] } : {}),
+        baseUrl: api === 'anthropic-messages' ? root : `${root}/v1` });
       await writeFile(path.join(dir, 'models.json'), JSON.stringify(config));
       const runtime = await ModelRuntime.create({ modelsPath: path.join(dir, 'models.json'), authPath: path.join(dir, 'auth.json'), refreshOnCreate: false });
       const model = runtime.getModel('fixture', 'fixture');
       assert.equal(model.api, api);
       const context = { messages: [{ role: 'user', content: [{ type: 'text', text: '请查看' }, { type: 'image', data: pixel, mimeType: 'image/png' }], timestamp: 1 }],
         tools: [{ name: 'observe', description: '读取画面', parameters: { type: 'object', properties: {} } }] };
-      const options = { apiKey: 'fixture-key', maxRetries: 0 };
+      const options = { apiKey: 'fixture-key', maxRetries: 0, ...(api === 'anthropic-messages' ? { reasoning: 'high' } : {}) };
       const first = await runtime.completeSimple(model, context, options);
       if (failure) throw failure;
       assert.equal(first.stopReason, 'toolUse', `${api}: ${first.errorMessage}`);
@@ -88,9 +94,10 @@ test('Pi model registry honors explicit protocol overrides on a known model', as
     const model = runtime.getModel('deepseek', 'deepseek-flash');
     assert.equal(model.api, api);
     assert.equal(model.baseUrl, 'http://127.0.0.1:1');
-    assert.equal(model.reasoning, true);
-    if (api === 'openai-completions') assert.equal(model.compat.requiresReasoningContentOnAssistantMessages, true);
-    else assert.equal(model.compat?.requiresReasoningContentOnAssistantMessages, undefined);
+    assert.equal(model.reasoning, false);
+    assert.deepEqual(model.input, ['text']);
+    assert.equal(model.contextWindow, 128000);
+    assert.equal(model.compat?.requiresReasoningContentOnAssistantMessages, undefined);
   }
 });
 

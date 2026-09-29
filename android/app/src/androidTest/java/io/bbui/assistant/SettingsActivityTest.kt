@@ -106,16 +106,18 @@ class SettingsActivityTest : ForegroundDeviceTest() {
         }
     }
 
-    @Test fun editingModelIdRefreshesCapabilitiesWithoutNetwork() {
+    @Test fun editingModelIdKeepsExplicitCapabilitiesWithoutCatalogGuessing() {
         val activity = launch()
         try {
             instrumentation.runOnMainSync {
                 activity.editConnection(JSONObject().put("name", "temporary editor").put("provider", "deepseek").put("api", "openai-completions")
                     .put("baseUrl", "https://example.invalid/v1").put("apiKey", "not-persisted")
-                    .put("models", JSONArray().put(JSONObject().put("id", "deepseek-chat").put("name", "Capability fixture"))))
+                    .put("models", JSONArray().put(JSONObject().put("id", "deepseek-chat").put("name", "Capability fixture")
+                        .put("input", JSONArray(listOf("text", "image"))).put("contextWindow", 32000))))
                 views(activity).filterIsInstance<Button>().single { it.text == "Capability fixture" }.performClick()
                 views(activity).filterIsInstance<EditText>().single { it.contentDescription == "模型 ID" }.setText("unknown-model-fixture")
-                assertTrue(views(activity).filterIsInstance<TextView>().any { it.text.toString().contains("未知模型") })
+                assertEquals(1, views(activity).filterIsInstance<android.widget.Spinner>().single { it.contentDescription == "图片输入" }.selectedItemPosition)
+                assertEquals("32000", views(activity).filterIsInstance<EditText>().single { it.contentDescription == "上下文长度" }.text.toString())
                 assertFalse(views(activity).filterIsInstance<TextView>().any { it.text.toString().startsWith("Pi 模型元数据") })
             }
         } finally { instrumentation.runOnMainSync { activity.finish() } }

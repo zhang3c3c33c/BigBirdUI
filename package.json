@@ -17,7 +17,7 @@
     "desktop:build": "node scripts/desktop/build.mjs",
     "desktop": "electron .desktop/app",
     "desktop:package": "node scripts/desktop/package.mjs",
-    "test:desktop": "tsx --test tests/desktop.test.mjs tests/desktop-control.test.mjs tests/desktop-readiness.test.mjs tests/desktop-queue.test.mjs",
+    "test:desktop": "tsx --test tests/desktop.test.mjs tests/desktop-control.test.mjs tests/desktop-readiness.test.mjs tests/desktop-queue.test.mjs tests/model-settings.test.mjs",
     "typecheck": "tsc --noEmit",
     "test:pi": "tsx --test tests/pi.test.ts",
     "test:session-title": "node --test pi/android/session-title.test.mjs pi/android/sessions.test.mjs",

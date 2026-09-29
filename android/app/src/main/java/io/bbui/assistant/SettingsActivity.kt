@@ -228,11 +228,11 @@ class SettingsActivity : AppCompatActivity() {
     private fun action(form: LinearLayout, text: String, danger: Boolean = false, block: () -> Unit) { form.addView(button(text, danger = danger, action = block), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) }) }
     private fun connectionForm() {
         val value = draft.connection!!; val form = form()
-        action(form, "使用供应商预设") {
-            androidx.appcompat.app.AlertDialog.Builder(this).setTitle("供应商预设").setItems(arrayOf("DeepSeek", "OpenAI", "Anthropic")) { _, index ->
-                val presets = listOf(Triple("deepseek", "openai-completions", "https://api.deepseek.com"), Triple("openai", "openai-responses", "https://api.openai.com/v1"), Triple("anthropic", "anthropic-messages", "https://api.anthropic.com"))
-                val preset = presets[index]; value.put("provider", preset.first).put("api", preset.second).put("baseUrl", preset.third)
-                if (value.optString("name").isBlank()) value.put("name", arrayOf("DeepSeek", "OpenAI", "Anthropic")[index]); render()
+        action(form, "使用配置预设") {
+            val presets = ProviderPresets.parse(assets.open("provider-presets.json").bufferedReader().use { it.readText() })
+            val names = listOf("自定义") + presets.map { it.getString("name") }
+            androidx.appcompat.app.AlertDialog.Builder(this).setTitle("配置预设").setItems(names.toTypedArray()) { _, index ->
+                ProviderPresets.apply(value, presets.getOrNull(index - 1), presets); render()
             }.show()
         }
         field(form, "连接名称", value.optString("name")) { value.put("name", it) }
@@ -258,12 +258,6 @@ class SettingsActivity : AppCompatActivity() {
         action(form, "保存连接") {
             require(value.optString("name").isNotBlank()) { "请填写连接名称" }
             require(models.length() > 0 && (0 until models.length()).all { models.getJSONObject(it).optString("id").isNotBlank() }) { "请添加模型并填写模型 ID" }
-            for (index in 0 until models.length()) {
-                val model = models.getJSONObject(index)
-                val meta = store.modelMetadata(value.optString("provider"), value.optString("api"), model.optString("id"))
-                if (meta.optBoolean("known")) listOf("input", "reasoning", "contextWindow", "maxTokens").forEach { model.remove(it) }
-                else if (!model.has("input")) model.put("input", JSONArray().put("text"))
-            }
             store.saveConnection(value); changed(); discard()
         }
         if (value.optString("id").isNotBlank()) {
@@ -304,11 +298,15 @@ class SettingsActivity : AppCompatActivity() {
             action(root, "重新获取") { draft.fetchModels() }; return
         }
         val saved = draft.connection!!.getJSONArray("models")
+        for (index in 0 until saved.length()) {
+            val model = saved.getJSONObject(index)
+            draft.discovered.firstOrNull { it.id == model.optString("id") }?.let { ModelSettings.fillMissing(model, it.toJson()) }
+        }
         val existing = (0 until saved.length()).map { saved.getJSONObject(it).optString("id") }.toSet()
         val list = ListView(this).apply { choiceMode = ListView.CHOICE_MODE_MULTIPLE; divider = null }
         var visible = emptyList<DiscoveredModel>()
         val add = button("添加所选模型") {
-            for (model in draft.discovered) if (model.id in draft.pickedModels && model.id !in existing) saved.put(JSONObject().put("id", model.id).put("name", model.name))
+            for (model in draft.discovered) if (model.id in draft.pickedModels && model.id !in existing) saved.put(model.toJson())
             draft.pickedModels.clear(); open("connection")
         }
         fun update() {
@@ -333,32 +331,34 @@ class SettingsActivity : AppCompatActivity() {
         val connection = draft.connection!!; val models = connection.getJSONArray("models")
         if (modelIndex !in 0 until models.length()) { open("connection"); return }
         val value = models.getJSONObject(modelIndex); val form = form()
-        var refreshMetadata: (() -> Unit)? = null
-        field(form, "模型 ID", value.optString("id")) { value.put("id", it.trim()); refreshMetadata?.invoke() }
+        field(form, "模型 ID", value.optString("id")) { value.put("id", it.trim()) }
         field(form, "显示名称", value.optString("name")) { value.put("name", it) }
-        val info = TextView(this).apply { textSize = 14f; setTextColor(UiStyle.muted); setPadding(0, dp(16), 0, dp(8)) }; form.addView(info)
-        val advanced = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }; form.addView(advanced)
-        fun metadata() {
-            advanced.removeAllViews()
-            val meta = store.modelMetadata(connection.optString("provider"), connection.optString("api"), value.optString("id"))
-            if (meta.optBoolean("known")) {
-                val image = meta.optJSONArray("input")?.let { a -> (0 until a.length()).any { a.optString(it) == "image" } } == true
-                info.text = "Pi 模型元数据\n图片输入：${if (image) "支持" else "不支持"}\n思考：${if (meta.optBoolean("reasoning")) "支持" else "不支持"}\n工具调用：需端点验证\n上下文：${meta.optInt("contextWindow")} · 最大输出：${meta.optInt("maxTokens")}"
-                // Known capabilities are always resolved from Pi; stale custom declarations must not override them.
-                listOf("input", "reasoning", "contextWindow", "maxTokens").forEach { value.remove(it) }
-            } else {
-                info.text = "未知模型 · 能力未验证\n以下为用户声明，不能代替端点测试。"
-                if (!value.has("input")) value.put("input", JSONArray().put("text"))
-                advanced.addView(CheckBox(this).apply {
-                    text = "支持图片输入"; isChecked = value.optJSONArray("input")?.toString()?.contains("image") == true
-                    setOnCheckedChangeListener { _, checked -> value.put("input", JSONArray().put("text").apply { if (checked) put("image") }) }
-                })
-                advanced.addView(CheckBox(this).apply { text = "支持思考"; isChecked = value.optBoolean("reasoning"); setOnCheckedChangeListener { _, checked -> value.put("reasoning", checked) } })
-                field(advanced, "上下文长度", value.optString("contextWindow"), number = true) { if (it.isBlank()) value.remove("contextWindow") else value.put("contextWindow", it.toIntOrNull() ?: 0) }
-                field(advanced, "最大输出长度", value.optString("maxTokens"), number = true) { if (it.isBlank()) value.remove("maxTokens") else value.put("maxTokens", it.toIntOrNull() ?: 0) }
-            }
+        label(form, "获取模型会补全接口提供的能力；缺失项可按模型文档设置，已有设置会保留。")
+        fun capability(title: String, current: Boolean?, change: (Boolean?) -> Unit) {
+            label(form, title)
+            var selected = if (current == null) 0 else if (current) 1 else 2
+            form.addView(Spinner(this).apply {
+                contentDescription = title
+                adapter = ArrayAdapter(this@SettingsActivity, android.R.layout.simple_spinner_dropdown_item, listOf("未设置", "支持", "不支持"))
+                setSelection(selected)
+                onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                    override fun onNothingSelected(parent: AdapterView<*>?) {}
+                    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                        if (position == selected) return
+                        selected = position; change(if (position == 0) null else position == 1)
+                    }
+                }
+            }, LinearLayout.LayoutParams(-1, dp(48)))
         }
-        refreshMetadata = { metadata() }; metadata()
+        capability("图片输入", if (value.has("input")) value.getJSONArray("input").toString().contains("\"image\"") else null) { supported ->
+            if (supported == null) value.remove("input") else value.put("input", JSONArray().put("text").apply { if (supported) put("image") })
+        }
+        capability("思考能力", value.opt("reasoning") as? Boolean) { supported ->
+            if (supported == null) value.remove("reasoning") else value.put("reasoning", supported)
+        }
+        field(form, "上下文长度", value.optString("contextWindow"), number = true) { if (it.isBlank()) value.remove("contextWindow") else value.put("contextWindow", it.toIntOrNull() ?: 0) }
+        field(form, "最大输出长度", value.optString("maxTokens"), number = true) { if (it.isBlank()) value.remove("maxTokens") else value.put("maxTokens", it.toIntOrNull() ?: 0) }
+        label(form, "长度留空时使用应用预算：上下文 128000、输出 8192 tokens；并非模型声明的上限。")
         action(form, "完成") { require(value.optString("id").isNotBlank()) { "请填写模型 ID" }; open("connection") }
         action(form, "移除此模型", danger = true) { models.remove(modelIndex); open("connection") }
     }

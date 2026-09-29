@@ -73,7 +73,8 @@ body { min-width:1000px; font-family:'Segoe UI','Microsoft YaHei',sans-serif; }
 .settings textarea { min-height:110px; resize:vertical; }
 .settings .check { display:flex; flex-direction:row; align-items:center; white-space:nowrap; }
 .settings fieldset { border:1px solid var(--ui-border); border-radius:10px; margin:0 0 18px; }
-.model-line { display:flex; gap:8px; align-items:center; }.model-line>input { flex:1; min-width:100px; }
+.model-line { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }.model-line>input { flex:1; min-width:100px; }
+.model-settings { margin:12px 0; }.model-settings summary { cursor:pointer; padding:8px 0; }
 .settings .memory-editor { width:100%; min-height:300px; margin:12px 0; }
 .settings footer { padding:12px 24px; border-top:1px solid var(--ui-border); text-align:right; }
 .settings footer p { text-align:left; font-size:13px; white-space:pre-wrap; max-height:100px; overflow:auto; }

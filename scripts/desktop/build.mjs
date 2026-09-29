@@ -44,7 +44,7 @@ for (const file of ['pi/phone-contract.ts', 'pi/task-state.ts', 'pi/phone-skill.
 await cp(path.join(root, 'pi/desktop/tools.mjs'), path.join(runtime, 'pi/desktop/tools.mjs'));
 await cp(path.join(root, 'pi/skills/phone-operation'), path.join(runtime, 'pi/skills/phone-operation'), { recursive: true });
 await bundleTools(path.join(runtime, 'pi/android/tools'));
-await copyFile(path.join(root, 'android/app/src/main/assets/model-catalog.json'), path.join(runtime, 'model-catalog.json'));
+await rm(path.join(runtime, 'model-catalog.json'), { force: true });
 await build({ entryPoints: [path.join(root, 'desktop/main.mjs')], outfile: path.join(app, 'main.mjs'), bundle: true,
   platform: 'node', format: 'esm', target: 'node24', external: ['electron'], legalComments: 'linked', banner: { js: "import { createRequire as bbuiCreateRequire } from 'node:module'; const require = bbuiCreateRequire(import.meta.url);" } });
 await copyFile(path.join(root, 'desktop/preload.cjs'), path.join(app, 'preload.cjs'));

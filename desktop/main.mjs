@@ -6,6 +6,7 @@ import { windowsPlatform } from './platform.mjs';
 import { DesktopHost } from './host.mjs';
 import { PiProcess } from './rpc.mjs';
 import { discoverDevices } from './devices.mjs';
+import { discoverModels } from './model-discovery.mjs';
 import { APP_NAME, configureAppIdentity } from './branding.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -67,10 +68,8 @@ else app.whenReady().then(async () => {
       case 'memory': return host.memory(params);
       case 'discover': {
         const c = host.settings.connections.find(c => c.id === params.connectionId); if (!c) throw new Error('请先保存连接');
-        const url = new URL(c.baseUrl.replace(/\/$/, '') + '/models');
-        const response = await fetch(url, { headers: { Authorization: `Bearer ${c.apiKey}`, ...(c.api === 'anthropic-messages' ? { 'x-api-key': c.apiKey, 'anthropic-version': '2023-06-01' } : {}) }, signal: AbortSignal.timeout(20000) });
-        if (!response.ok) throw new Error(`模型发现失败：HTTP ${response.status}`);
-        const data = await response.json(); return (data.data || []).map(m => ({ id: m.id, name: m.name || m.id }));
+        if (params.api !== c.api || params.baseUrl !== c.baseUrl || params.clearApiKey || (params.apiKey && params.apiKey !== c.apiKey)) throw new Error('请先保存连接修改，再获取模型');
+        return discoverModels(c);
       }
       case 'probe': {
         const c = host.settings.connections.find(c => c.id === params.connectionId); if (!c) throw new Error('请先保存连接');

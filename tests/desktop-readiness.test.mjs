@@ -199,7 +199,7 @@ function fixture(t) {
   host.settings = { serial: 'fixture', blocked_packages: [], tools: { search: {} },
     defaultModel: { connectionId: 'c', modelId: 'm' },
     connections: [{ id: 'c', baseUrl: 'https://example.test/v1', apiKey: 'fixture', models: [{ id: 'm' }] }] };
-  host.modelCatalog = []; host.publish = () => {}; host.save = async () => {};
+  host.publish = () => {}; host.save = async () => {};
   host.catalog = { resolve: async () => {} }; host.connected = true; host.hostPort = 1;
   host.bridge = { close: async () => {}, settled: async () => {}, setStopped: async () => {},
     call: async () => ({ details: {} }) };

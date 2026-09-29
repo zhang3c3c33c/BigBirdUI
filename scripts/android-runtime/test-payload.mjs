@@ -184,6 +184,7 @@ async function run(marker, gate, restore, targetSessionId) {
   ].map((step, index) => ({ ...step, id: `fixture-call-${runNumber}-${index + 1}` }));
   await writeFile(config, JSON.stringify({ bridgeUrl: base, bridgeToken: token, gate, sessionId: targetSessionId,
     baseUrl: `${base}/v1`, apiKey: token, provider: 'deepseek', model: 'deepseek-flash',
+    input: ['text', 'image'], reasoning: true, thinkingLevels: ['off', 'low', 'high'].map(id => ({ id, label: id })),
     api: 'openai-completions', ...(restore ? {thinkingLevel: 'low'} : {}) }));
   const child = spawn(process.execPath, ['--require', offlineGuard, path.join(stage, 'bootstrap.mjs'), config], {
     cwd: stage, env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '', PI_CODING_AGENT_DIR: home },
@@ -220,7 +221,9 @@ async function run(marker, gate, restore, targetSessionId) {
               sessionId = event.data.sessionId;
               assert.equal(event.data.model.reasoning, true);
               if (!gate) assert.equal(event.data.thinkingLevel, restore ? 'low' : 'high', 'Explicit composer setting overrides resumed session; inheritance preserves Pi defaults');
-              assert.equal(event.data.model.compat.requiresReasoningContentOnAssistantMessages, true);
+              assert.equal(event.data.model.reasoning, true);
+              assert.deepEqual(event.data.model.input, ['text', 'image']);
+              assert.equal(event.data.model.compat, undefined, 'capability catalog is not imported; wire compatibility is checked on requests');
               child.stdin.write('{"id":"history","type":"get_messages"}\n');
             }
             if (event.type === 'response' && event.id === 'history') {

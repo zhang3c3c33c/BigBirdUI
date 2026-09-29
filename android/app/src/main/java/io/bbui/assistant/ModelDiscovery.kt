@@ -6,7 +6,9 @@ import java.net.URI
 import java.net.URLEncoder
 import java.io.Closeable
 
-data class DiscoveredModel(val id: String, val name: String)
+data class DiscoveredModel(val id: String, val name: String, val settings: JSONObject = JSONObject()) {
+    fun toJson(): JSONObject = JSONObject(settings.toString()).put("id", id).put("name", name)
+}
 class ModelDiscoveryFailure(message: String) : Exception(message)
 
 /** Read-only provider catalogue, independent of the single Pi/phone execution lease. */
@@ -65,8 +67,7 @@ class ModelDiscovery : Closeable {
                     val model = data.getJSONObject(index)
                     val id = model.getString("id").trim()
                     if (id.isBlank()) throw ModelDiscoveryFailure("供应商返回了无效的模型 ID")
-                    // Listing is discovery, not proof of vision/reasoning/tool compatibility.
-                    found.putIfAbsent(id, DiscoveredModel(id, model.optString("display_name").ifBlank { id }))
+                    found.putIfAbsent(id, DiscoveredModel(id, model.optString("display_name").ifBlank { model.optString("name").ifBlank { id } }, ModelSettings.fromEndpoint(model)))
                 }
                 after = if (anthropic && page.optBoolean("has_more")) {
                     page.optString("last_id").takeIf { it.isNotBlank() && cursors.add(it) }

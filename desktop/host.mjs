@@ -8,6 +8,7 @@ import { PhoneBridge } from '../pi/bridge.ts';
 import { PiProcess } from './rpc.mjs';
 import { atomicJson, readJson, restoreState, bindSubmission, validateAnswer, deviceIdentity } from './state.mjs';
 import { projectMessages } from './projection.mjs';
+import { thinkingLevels, validateModelSettings } from '../pi/android/runtime-config.mjs';
 
 const reads = { apps: ['list', 'details', 'launch_entries', 'permissions'], notifications: ['list', 'details'], clipboard: ['read'], files: ['list', 'stat', 'search', 'read_text'] };
 const defaults = { version: 1, revision: '', serial: '', devicePlatform: 'android', blocked_packages: [], connections: [], tools: { search: { provider: '' } }, defaultModel: null, floatingStop: false };
@@ -27,7 +28,6 @@ export class DesktopHost extends EventEmitter {
     const sealed = await readJson(path.join(this.data, 'settings.json'), null);
     this.settings = sealed ? this.platform.unseal(sealed.value) : structuredClone(defaults);
     this.settings.devicePlatform ||= 'android';
-    this.modelCatalog = await readJson(path.join(this.platform.resource('pi'), 'model-catalog.json'), []);
     this.home = path.join(this.data, 'agent'); await mkdir(this.home, { recursive: true });
     const { SessionCatalog } = await import(pathToFileURL(path.join(this.platform.resource('pi'), 'sessions.mjs')).href);
     this.catalog = new SessionCatalog(path.join(this.home, 'sessions'), path.join(this.home, 'workspace'));
@@ -147,7 +147,7 @@ export class DesktopHost extends EventEmitter {
       viewState: this.state.views[id] || { text: '', scrollTop: 0 }, modelSelection: this.state.selections[id] || this.settings.defaultModel,
       modelOptions: this.settings.connections.flatMap(c => (c.models || []).map(m => ({
         connectionId: c.id, connectionName: c.name, modelId: m.id, modelName: m.name || m.id,
-        thinkingLevels: m.thinkingLevels || [], defaultThinkingLevel: m.defaultThinkingLevel || '',
+        thinkingLevels: thinkingLevels(m), defaultThinkingLevel: m.defaultThinkingLevel || '',
       }))),
       pendingQuestion: this.question?.record || null, questionHistory: questions,
       submissionResult: this.submissionResult, modelSelectionResult: this.modelSelectionResult, questionResult: this.questionResult,
@@ -965,10 +965,12 @@ export class DesktopHost extends EventEmitter {
     for (const connection of value.connections) {
       const url = new URL(connection.baseUrl);
       if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password || !connection.models.every(m => m.id?.trim())) throw new Error('请输入有效 API 地址和模型 ID');
+      for (const model of connection.models) validateModelSettings(model);
     }
     const next = { ...value, devicePlatform: value.devicePlatform || 'android', version: 1, revision: randomUUID() };
-    next.connections = value.connections.map(c => ({ ...c, apiKey: c.apiKey || this.settings.connections.find(old => old.id === c.id)?.apiKey || '',
-      models: c.models.map(m => ({ ...m, ...(this.modelCatalog.find(known => known.provider === c.provider && known.api === c.api && known.id === m.id) || {} ) })) }));
+    next.connections = value.connections.map(({ clearApiKey, ...c }) => ({ ...c,
+      apiKey: c.apiKey || (!clearApiKey && this.settings.connections.find(old => old.id === c.id)?.apiKey) || '',
+      models: c.models.map(m => ({ ...m })) }));
     next.tools.search.apiKey ||= this.settings.tools.search.apiKey || '';
     const sealed = { value: await this.platform.seal(next) };
     await atomicJson(path.join(this.data, 'configurations', next.revision + '.json'), sealed);

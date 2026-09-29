@@ -1,20 +1,27 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DEEPSEEK_MODELS } from '@earendil-works/pi-ai/providers/deepseek.models';
+import { getSupportedThinkingLevels } from '@earendil-works/pi-ai';
 import { modelConfiguration, runtimeSettings, SUPPORTED_APIS, validateThinkingLevel } from './runtime-config.mjs';
 
-test('known DeepSeek models keep the original Pi capabilities and reasoning protocol', () => {
-  for (const id of Object.keys(DEEPSEEK_MODELS)) {
-    const provider = modelConfiguration({ provider: 'deepseek', model: id,
-      baseUrl: 'http://127.0.0.1/mock', apiKey: 'must-not-serialize' }).providers.deepseek;
-    assert.equal(provider.models, undefined);
-    assert.equal(provider.api, undefined);
-    assert.equal(provider.baseUrl, 'http://127.0.0.1/mock');
-    assert.equal(provider.apiKey, '$BBUI_MODEL_KEY');
-    assert.equal(JSON.stringify(provider).includes('must-not-serialize'), false);
-    assert.equal(DEEPSEEK_MODELS[id].reasoning, true);
-    assert.equal(DEEPSEEK_MODELS[id].compat.requiresReasoningContentOnAssistantMessages, true);
+test('saved model capabilities override every provider and known model name', () => {
+  for (const provider of ['deepseek', 'openai', 'anthropic', 'bbui', 'openrouter']) {
+    const config = { provider, model: 'deepseek-flash', input: ['text'], reasoning: false,
+      contextWindow: 32000, maxTokens: 4000, apiKey: 'must-not-serialize' };
+    const definition = modelConfiguration(config).providers[provider];
+    assert.deepEqual(definition.models[0].input, ['text']);
+    assert.equal(definition.models[0].reasoning, false);
+    assert.equal(definition.models[0].contextWindow, 32000);
+    assert.equal(definition.models[0].maxTokens, 4000);
+    assert.equal(JSON.stringify(definition).includes('must-not-serialize'), false);
   }
+});
+
+test('session controls use common protocol levels unless endpoint metadata limits them', () => {
+  const missing = modelConfiguration({ reasoning: true }).providers.bbui.models[0];
+  assert.deepEqual(getSupportedThinkingLevels(missing), ['off', 'minimal', 'low', 'medium', 'high']);
+  assert.equal(missing.thinkingLevelMap.off, undefined, 'off uses adapter encoding rather than a literal invalid effort');
+  const explicit = modelConfiguration({ reasoning: true, thinkingLevels: [{ id: 'high', label: 'high' }] }).providers.bbui.models[0];
+  assert.deepEqual(getSupportedThinkingLevels(explicit), ['high']);
 });
 
 test('unknown OpenAI-compatible models retain the explicit fallback contract', () => {
@@ -45,10 +52,9 @@ test('explicit protocol selects the adapter even for a built-in provider and mod
   for (const api of SUPPORTED_APIS) {
     const definition = modelConfiguration({ provider: 'deepseek', model: 'deepseek-flash', api }).providers.deepseek;
     assert.equal(definition.api, api);
-    if (api !== 'openai-completions') {
-      assert.equal(definition.models[0].contextWindow, DEEPSEEK_MODELS['deepseek-flash'].contextWindow);
-      assert.equal(definition.models[0].compat, undefined, 'do not carry Chat-specific compatibility to other protocols');
-    }
+    assert.equal(definition.models[0].reasoning, false);
+    assert.equal(definition.models[0].contextWindow, 128000);
+    assert.equal(definition.models[0].compat, undefined);
     assert.equal(modelConfiguration({ provider: 'custom', model: 'vision', api }).providers.custom.api, api);
   }
   assert.throws(() => modelConfiguration({ api: 'guess-protocol' }), /不支持的 API/);
@@ -56,7 +62,14 @@ test('explicit protocol selects the adapter even for a built-in provider and mod
 
 test('thinking validation preserves inheritance and rejects unsupported explicit values', async () => {
   await validateThinkingLevel({provider:'custom',model:'custom',thinkingLevel:''});
-  await validateThinkingLevel({provider:'deepseek',model:'deepseek-flash',api:'openai-completions',thinkingLevel:'high'});
+  await validateThinkingLevel({provider:'deepseek',model:'deepseek-flash',api:'openai-completions',reasoning:true,thinkingLevels:[{id:'high',label:'high'}],thinkingLevel:'high'});
   await assert.rejects(validateThinkingLevel({provider:'deepseek',model:'deepseek-flash',api:'openai-completions',thinkingLevel:'imaginary'}));
   await assert.rejects(validateThinkingLevel({provider:'custom',model:'custom',api:'openai-completions',thinkingLevel:'high'}));
+});
+
+test('explicit adaptive thinking metadata selects the wire format without model-name inference', () => {
+  for (const api of SUPPORTED_APIS) {
+    const model = modelConfiguration({ api, provider: 'arbitrary', model: 'arbitrary', reasoning: true, thinkingMode: 'adaptive' }).providers.arbitrary.models[0];
+    assert.equal(model.compat?.forceAdaptiveThinking, api === 'anthropic-messages' ? true : undefined);
+  }
 });
