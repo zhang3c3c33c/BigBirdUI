@@ -34,7 +34,7 @@ if (!existsSync(marker) || await readFile(marker, 'utf8') !== sha(lock)) {
 }
 // Share the Android runtime bootstrap and tools; only the device bridge differs.
 await patchSessionReader(runtime);
-for (const name of ['bootstrap', 'sessions', 'session-title', 'runtime-config', 'model-probe', 'rpc-timing', 'display-projection', 'request-budget', 'extensions-manifest']) {
+for (const name of ['bootstrap', 'sessions', 'session-title', 'runtime-config', 'model-probe', 'rpc-timing', 'display-projection', 'request-budget', 'reasoning-request', 'extensions-manifest']) {
   await copyFile(path.join(root, 'pi/android', name + '.mjs'), path.join(runtime, name + '.mjs'));
 }
 for (const file of ['pi/phone-contract.ts', 'pi/task-state.ts', 'pi/phone-skill.ts', 'pi/android/screenshot-context.ts', 'pi/desktop/extension.ts']) {

@@ -93,11 +93,23 @@ class SessionController(private val context: Context, private val coordinator: A
     fun settingsChanged() {
         state.modelOptions = settings.modelOptions()
         val default = settings.registry().getJSONObject("defaultSelection")
-        for (id in state.sessions.keys) if (state.modelSelections[id]?.optString("connectionId").isNullOrBlank()) state.modelSelections[id] = JSONObject(default.toString())
+        for (id in state.sessions.keys) {
+            val selection = state.modelSelections[id]?.takeIf { it.optString("connectionId").isNotBlank() } ?: default
+            state.modelSelections[id] = normalizeSelection(selection)
+        }
         for (item in state.queue) if (!item.has("modelBinding") && testConfig == null) runCatching {
             item.put("modelBinding", settings.binding(state.modelSelections[item.getString("sessionId")] ?: default))
         }.onFailure { state.error = it.message.orEmpty(); state.pauseReasons.add("error") }
         publish()
+    }
+    private fun normalizeSelection(selection: JSONObject): JSONObject {
+        val copy = JSONObject(selection.toString())
+        val option = (0 until state.modelOptions.length()).map { state.modelOptions.getJSONObject(it) }.firstOrNull {
+            it.optString("connectionId") == selection.optString("connectionId") && it.optString("modelId") == selection.optString("modelId")
+        } ?: return copy
+        val levels = option.getJSONArray("thinkingLevels")
+        if ((0 until levels.length()).none { levels.getJSONObject(it).getString("id") == selection.optString("thinkingLevel") }) copy.put("thinkingLevel", "")
+        return copy
     }
     private fun selectModel(command: JSONObject) {
         val id = command.optString("sessionId")
@@ -110,6 +122,7 @@ class SessionController(private val context: Context, private val coordinator: A
             if (command.getString("type") == "selectModel") {
                 selection.put("connectionId", command.getString("connectionId")).put("modelId", command.getString("modelId"))
                 selection.put("thinkingLevel", state.modelChoices[id]?.optString("${selection.getString("connectionId")}/${selection.getString("modelId")}") ?: "")
+                selection.put("thinkingLevel", normalizeSelection(selection).optString("thinkingLevel"))
             } else selection.put("thinkingLevel", command.getString("thinkingLevel"))
             settings.binding(selection)
             val option = (0 until state.modelOptions.length()).map { state.modelOptions.getJSONObject(it) }.firstOrNull {

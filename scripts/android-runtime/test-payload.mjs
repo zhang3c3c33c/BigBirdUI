@@ -16,12 +16,22 @@ const stage = path.join(home, 'payload');
 const offlineGuard = path.join(home, 'loopback-only.cjs');
 await writeFile(offlineGuard, `
 const net = require('node:net');
+const originalFetch = globalThis.fetch;
+globalThis.fetch = (input, init) => {
+  const url = new URL(input instanceof Request ? input.url : String(input));
+  if (url.href === 'https://api.deepseek.com/v1/chat/completions') {
+    const destination = process.env.BBUI_TEST_MODEL_URL;
+    if (!destination) throw new Error('Missing local fixture redirect');
+    return originalFetch(input instanceof Request ? new Request(destination, input) : destination, init);
+  }
+  return originalFetch(input, init);
+};
 const connect = net.Socket.prototype.connect;
 net.Socket.prototype.connect = function (...args) {
   const options = net._normalizeArgs(args)[0];
   const host = options.host || 'localhost';
   if (!options.path && !['localhost', '127.0.0.1', '::1'].includes(host)) {
-    process.stderr.write('Unexpected internet connection: ' + host + '\\n');
+    process.stderr.write('Unexpected internet connection: ' + host + '\\n' + new Error('Fixture network stack').stack + '\\n');
     process.exit(97);
   }
   return connect.apply(this, args);
@@ -39,7 +49,7 @@ const reasoning = '先观察手机，再确认当前画面。🧭';
 const reply = '完成观察。你好，世界！👋\n\n- 第一项\n- 第二项\n\n```js\nconsole.log("完成");\n```';
 const capturedEvents = [];
 let modelCalls = 0, actionCalls = 0, sawImage = false, runNumber = 0;
-let shouldRestore = false, currentMarker = '', plan = [], currentTask, expectedMemory = null;
+let shouldRestore = false, currentMarker = '', plan = [], currentTask, expectedMemory = null, currentThinking;
 let serverFailure = null;
 
 function task(status, marker) {
@@ -89,7 +99,9 @@ const server = createServer(async (req, res) => {
       assert.equal(phoneSchema.properties.意图.maxLength, 80);
       assert.ok(phoneSchema.required.includes('意图'), 'Intent must be enforced by Pi schema validation');
       assert.equal(body.model, 'deepseek-flash');
-      assert.equal(body.thinking.type, 'enabled');
+      assert.deepEqual(body.thinking, currentThinking ? { type: currentThinking === 'off' ? 'disabled' : 'enabled' } : undefined,
+        'Only the explicit app selection controls the wire request; Pi settings must not override API defaults');
+      assert.equal(body.reasoning_effort, currentThinking && currentThinking !== 'off' ? currentThinking : undefined);
       if (modelCalls > 1) assert.ok(body.messages.some(message => message.reasoning_content === reasoning),
         'Pi must retain DeepSeek reasoning_content through all task and phone tool calls');
       const messages = JSON.stringify(body.messages);
@@ -170,6 +182,7 @@ async function run(marker, gate, restore, targetSessionId) {
   runNumber++;
   modelCalls = 0; actionCalls = 0; sawImage = false; serverFailure = null;
   currentMarker = marker; shouldRestore = restore;
+  currentThinking = restore ? 'max' : gate ? 'off' : undefined;
   expectedMemory = restore ? task('waiting_user', 'BBUI_REAL_FIRST') : null;
   currentTask = task(marker === 'BBUI_REAL_FIRST' ? 'waiting_user' : 'completed', marker);
   plan = [
@@ -183,11 +196,11 @@ async function run(marker, gate, restore, targetSessionId) {
     { name: 'task_state', label: 'read', args: { action: 'read' } },
   ].map((step, index) => ({ ...step, id: `fixture-call-${runNumber}-${index + 1}` }));
   await writeFile(config, JSON.stringify({ bridgeUrl: base, bridgeToken: token, gate, sessionId: targetSessionId,
-    baseUrl: `${base}/v1`, apiKey: token, provider: 'deepseek', model: 'deepseek-flash',
-    input: ['text', 'image'], reasoning: true, thinkingLevels: ['off', 'low', 'high'].map(id => ({ id, label: id })),
-    api: 'openai-completions', ...(restore ? {thinkingLevel: 'low'} : {}) }));
+    baseUrl: 'https://api.deepseek.com/v1', apiKey: token, provider: 'deepseek', model: 'deepseek-flash',
+    input: ['text', 'image'], reasoning: true, thinkingLevels: ['off', 'low', 'high', 'max'].map(id => ({ id, label: id })),
+    api: 'openai-completions', ...(currentThinking ? { thinkingLevel: currentThinking } : {}) }));
   const child = spawn(process.execPath, ['--require', offlineGuard, path.join(stage, 'bootstrap.mjs'), config], {
-    cwd: stage, env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '', PI_CODING_AGENT_DIR: home },
+    cwd: stage, env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '', PI_CODING_AGENT_DIR: home, BBUI_TEST_MODEL_URL: `${base}/v1/chat/completions` },
     stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
   });
   let stderr = '', buffer = '', boot = false, sessionId, historyRestored = false, activeCatalogRead = false, agentChecked = false;
@@ -220,10 +233,10 @@ async function run(marker, gate, restore, targetSessionId) {
               assert.equal(event.success, true);
               sessionId = event.data.sessionId;
               assert.equal(event.data.model.reasoning, true);
-              if (!gate) assert.equal(event.data.thinkingLevel, restore ? 'low' : 'high', 'Explicit composer setting overrides resumed session; inheritance preserves Pi defaults');
+              if (!gate) assert.equal(event.data.thinkingLevel, restore ? 'max' : 'high', 'Explicit max survives CLI, registry and resumed-session initialization');
               assert.equal(event.data.model.reasoning, true);
               assert.deepEqual(event.data.model.input, ['text', 'image']);
-              assert.equal(event.data.model.compat, undefined, 'capability catalog is not imported; wire compatibility is checked on requests');
+              assert.equal(event.data.model.compat.thinkingFormat, 'deepseek', 'verified endpoint selects only wire compatibility');
               child.stdin.write('{"id":"history","type":"get_messages"}\n');
             }
             if (event.type === 'response' && event.id === 'history') {
@@ -347,6 +360,51 @@ async function catalogGate() {
   } finally { child.kill(); }
 }
 
+async function budgetGate() {
+  const previousCalls = modelCalls;
+  await writeFile(config, JSON.stringify({ bridgeUrl: base, bridgeToken: token, gate: true,
+    baseUrl: 'https://api.deepseek.com/v1', apiKey: token, provider: 'deepseek', model: 'deepseek-flash',
+    api: 'openai-completions', contextWindow: 2147483647, reasoning: false }));
+  const child = spawn(process.execPath, ['--require', offlineGuard, path.join(stage, 'bootstrap.mjs'), config], {
+    cwd: stage, env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '', PI_CODING_AGENT_DIR: home, BBUI_TEST_MODEL_URL: `${base}/v1/chat/completions` },
+    stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
+  });
+  let buffer = '', stderr = '';
+  child.stderr.on('data', chunk => { stderr += chunk; });
+  try {
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`RPC budget gate timeout: ${stderr.slice(-1000)}`)), 60000);
+      const fail = error => { clearTimeout(timer); reject(error); };
+      child.once('error', fail);
+      child.once('exit', code => fail(new Error(`Budget gate exited ${code}: ${stderr.slice(-1000)}`)));
+      child.stdout.setEncoding('utf8');
+      child.stdout.on('data', chunk => {
+        try {
+          buffer += chunk;
+          let index;
+          while ((index = buffer.indexOf('\n')) >= 0) {
+            const line = buffer.slice(0, index); buffer = buffer.slice(index + 1);
+            if (!line.trim()) continue;
+            const event = JSON.parse(line);
+            if (event.type === 'runtime_error') throw new Error(event.message);
+            if (event.type === 'response' && event.id === 'ready') {
+              assert.equal(event.success, true);
+              child.stdin.write(JSON.stringify({ type: 'prompt', message: 'x'.repeat(25 * 1024 * 1024) }) + '\n');
+            }
+            if (event.type === 'message_end' && event.message?.role === 'assistant') {
+              assert.equal(event.message.stopReason, 'error');
+              assert.match(event.message.errorMessage, /大鸟手机助手本地请求预算超限/);
+              assert.equal(modelCalls, previousCalls, 'oversized real RPC request never reaches the model fixture');
+              clearTimeout(timer); resolve();
+            }
+          }
+        } catch (error) { fail(error); }
+      });
+      child.stdin.write('{"id":"ready","type":"get_state"}\n');
+    });
+  } finally { child.kill(); }
+}
+
 try {
   const selectedSession = await catalogGate();
   await writeFile(path.join(home, 'settings.json'), JSON.stringify({ defaultThinkingLevel: 'high', testPreference: 'preserved' }));
@@ -359,8 +417,9 @@ try {
   const settings = JSON.parse(await readFile(path.join(home, 'settings.json'), 'utf8'));
   assert.equal(settings.defaultThinkingLevel, 'high');
   assert.equal(settings.testPreference, 'preserved');
+  await budgetGate();
   await writeFile(path.join(workspace, 'pi-chat-events.json'), JSON.stringify(capturedEvents, null, 2));
-  console.log('PASS exact Pi payload (local model fixture only): required intent correction without dispatch, task_state lifecycle/context/restart, no action replay, DeepSeek reasoning/image roundtrip, Unicode streaming, gate isolation, preserved settings');
+  console.log('PASS exact Pi payload (local model fixture only): required intent correction without dispatch, task_state lifecycle/context/restart, no action replay, DeepSeek default/off/max and reasoning/image roundtrip, RPC request budget, Unicode streaming, gate isolation, preserved settings');
 } finally {
   server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
 }

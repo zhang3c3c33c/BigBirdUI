@@ -8,10 +8,25 @@ import { mergeDiscoveredModels } from '../android/chat-ui/src/model-settings.tsx
 
 test('endpoint metadata agrees with native Android fixtures and never guesses by name', async () => {
   const cases = JSON.parse(await readFile(new URL('../pi/android/fixtures/model-metadata.json', import.meta.url), 'utf8'));
-  for (const { row, expected } of cases) {
-    const { id, name, ...actual } = discoveredModel(row);
+  for (const { row, connection, expected } of cases) {
+    const { id, name, ...actual } = discoveredModel(row, connection);
     assert.deepEqual(actual, expected);
   }
+});
+
+test('only the documented native DeepSeek endpoint adds a separate off control', () => {
+  const row = { id: 'arbitrary-name', effort: { supported_levels: ['low', 'high', 'max'], default_level: 'high' } };
+  for (const baseUrl of ['https://api.deepseek.com', 'https://api.deepseek.com/v1/']) {
+    const model = discoveredModel(row, { api: 'openai-completions', baseUrl });
+    assert.deepEqual(model.thinkingLevels.map(level => level.id), ['off', 'low', 'high', 'max']);
+    assert.equal(model.defaultThinkingLevel, 'high');
+  }
+  for (const baseUrl of ['https://api.deepseek.com.evil/v1', 'https://api.deepseek.com@evil/v1', 'https://user@api.deepseek.com/v1', 'https://api.deepseek.com/proxy', 'https://custom.invalid', 'http://api.deepseek.com', 'https://api.deepseek.com:444', 'https://api.deepseek.com?x=1']) {
+    const model = discoveredModel(row, { api: 'openai-completions', provider: 'deepseek', baseUrl });
+    assert.deepEqual(model.thinkingLevels.map(level => level.id), ['low', 'high', 'max']);
+  }
+  assert.deepEqual(discoveredModel(row, { api: 'openai-responses', baseUrl: 'https://api.deepseek.com' }).thinkingLevels.map(level => level.id), ['low', 'high', 'max']);
+  assert.equal(discoveredModel({ id: 'deepseek-chat', reasoning: true }, { api: 'openai-completions', baseUrl: 'https://api.deepseek.com' }).thinkingLevels, undefined);
 });
 
 test('refresh fills missing fields while preserving custom settings, models and names', () => {
@@ -19,6 +34,14 @@ test('refresh fills missing fields while preserving custom settings, models and 
   const remote = [{ id: 'm', name: 'renamed', input: ['text', 'image'], reasoning: true, contextWindow: 200000, maxTokens: 8000 }, { id: 'new' }];
   assert.deepEqual(mergeDiscoveredModels(saved, remote), [{ ...remote[0], ...saved[0] }, saved[1], remote[1]]);
   assert.equal(saved[0].contextWindow, 32000);
+});
+
+test('refresh only fills a discovered default supported by the final saved levels', () => {
+  const max = { id: 'max', label: 'max' };
+  const remote = [{ id: 'm', reasoning: true, thinkingLevels: [{ id: 'high', label: 'high' }, max], defaultThinkingLevel: 'high' }];
+  assert.equal(mergeDiscoveredModels([{ id: 'm', thinkingLevels: [max] }], remote)[0].defaultThinkingLevel, undefined);
+  assert.equal(mergeDiscoveredModels([{ id: 'm', thinkingLevels: [max], defaultThinkingLevel: 'max' }], remote)[0].defaultThinkingLevel, 'max');
+  assert.equal(mergeDiscoveredModels([{ id: 'm' }], remote)[0].defaultThinkingLevel, 'high');
 });
 
 test('all ten presets change connection fields without changing model capabilities', () => {

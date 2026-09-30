@@ -38,6 +38,16 @@ class ModelDiscoveryTest {
         }
         assertEquals(listOf("/v1/models?limit=1000 fixture 2023-06-01", "/v1/models?limit=1000&after_id=a fixture 2023-06-01"), calls)
     }
+    @Test fun discoveredEffortMetadataRetainsMaxAndDefaultWithoutInventingLevels() {
+        server({ reply(body = """{"data":[{"id":"model","input_modalities":["text"],"context_window":1048576,"max_output_tokens":98304,"effort":{"supported_levels":["low","high","max"],"default_level":"high"}}]}""") }) { base ->
+            val model = ModelDiscovery().use { it.fetch("openai-completions", base, "fixture") }.single().settings
+            val levels = model.getJSONArray("thinkingLevels")
+            assertEquals(listOf("low", "high", "max"), (0 until levels.length()).map { levels.getJSONObject(it).getString("id") })
+            assertEquals("high", model.getString("defaultThinkingLevel"))
+            assertEquals(1048576, model.getInt("contextWindow"))
+            assertEquals(98304, model.getInt("maxTokens"))
+        }
+    }
     @Test fun noRedirectCredentialsOrRawErrors() {
         var count = 0
         server({ request ->

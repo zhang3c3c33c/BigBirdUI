@@ -1,6 +1,11 @@
 export function mergeDiscoveredModels(saved: any[], discovered: any[]) {
-  const merged = saved.filter(model => model.id?.trim()).map(model => ({ ...discovered.find(item => item.id === model.id),
-    ...Object.fromEntries(Object.entries(model).filter(([, value]) => value != null)) }));
+  const merged = saved.filter(model => model.id?.trim()).map(model => {
+    const result = { ...discovered.find(item => item.id === model.id),
+      ...Object.fromEntries(Object.entries(model).filter(([, value]) => value != null)) };
+    if (model.defaultThinkingLevel == null && result.defaultThinkingLevel &&
+        !result.thinkingLevels?.some((level: { id: string }) => level.id === result.defaultThinkingLevel)) delete result.defaultThinkingLevel;
+    return result;
+  });
   for (const model of discovered) if (!merged.some(item => item.id === model.id)) merged.push(model);
   return merged;
 }

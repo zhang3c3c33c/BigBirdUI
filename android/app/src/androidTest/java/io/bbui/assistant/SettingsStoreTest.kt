@@ -84,4 +84,25 @@ class SettingsStoreTest {
         assertTrue(custom.getString("provider").startsWith("bbui-"))
         assertTrue(custom.getBoolean("reasoning"))
     }
+    @Test fun reasoningMetadataSurvivesStorageAndStaleSelectionsUseApiDefault() = withStore { store, _ ->
+        val levels = JSONArray().apply { for (id in listOf("off", "low", "high", "max")) put(JSONObject().put("id", id).put("label", id)) }
+        store.save(config().put("reasoning", true).put("thinkingLevels", levels).put("defaultThinkingLevel", "high"))
+        val original = store.registry()
+        val selection = original.getJSONObject("defaultSelection")
+        assertEquals("high", store.modelOptions().getJSONObject(0).getString("defaultThinkingLevel"))
+        assertEquals(4, store.modelOptions().getJSONObject(0).getJSONArray("thinkingLevels").length())
+        val selectedMax = JSONObject(selection.toString()).put("thinkingLevel", "max")
+        val binding = store.binding(selectedMax)
+        assertEquals("max", store.resolve(binding).getString("thinkingLevel"))
+        assertEquals("high", store.resolve(binding).getString("defaultThinkingLevel"))
+        assertEquals("", store.binding(JSONObject(selection.toString()).put("thinkingLevel", "medium")).getString("thinkingLevel"))
+        assertEquals("", store.resolve(JSONObject(binding.toString()).put("thinkingLevel", "minimal")).getString("thinkingLevel"))
+        assertEquals("", store.resolve(store.binding(selection)).getString("thinkingLevel"))
+        val edited = original.getJSONArray("connections").getJSONObject(0)
+        edited.getJSONArray("models").getJSONObject(0).remove("thinkingLevels")
+        edited.getJSONArray("models").getJSONObject(0).remove("defaultThinkingLevel")
+        store.saveConnection(edited)
+        assertEquals("", store.binding(selectedMax).getString("thinkingLevel"))
+        assertEquals("queued revision keeps its declared max", "max", store.resolve(binding).getString("thinkingLevel"))
+    }
 }

@@ -9,6 +9,7 @@ import { ModelRuntime } from '@earendil-works/pi-coding-agent';
 import { modelConfiguration, SUPPORTED_APIS } from './runtime-config.mjs';
 import { budgetedFetch } from './request-budget.mjs';
 import { probeWithRuntime } from './model-probe.mjs';
+import { reasoningFetch } from './reasoning-request.mjs';
 
 const pixel = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
 const jpegPixel = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD9U6KKKAP/2Q==';
@@ -97,8 +98,89 @@ test('Pi model registry honors explicit protocol overrides on a known model', as
     assert.equal(model.reasoning, false);
     assert.deepEqual(model.input, ['text']);
     assert.equal(model.contextWindow, 128000);
-    assert.equal(model.compat?.requiresReasoningContentOnAssistantMessages, undefined);
+    assert.equal(model.compat?.requiresReasoningContentOnAssistantMessages, api === 'openai-completions' ? false : undefined);
   }
+});
+
+test('real SDK requests preserve DeepSeek max, explicit off and server defaults without provider inference', async () => {
+  const requests = [];
+  const server = createServer(async (req, res) => {
+    const chunks = []; for await (const chunk of req) chunks.push(chunk);
+    requests.push(JSON.parse(Buffer.concat(chunks).toString()));
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    for (const event of events('openai-completions', false)) res.write(`data: ${JSON.stringify(event)}\n\n`);
+    res.end('data: [DONE]\n\n');
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const local = `http://127.0.0.1:${server.address().port}`;
+  const originalFetch = globalThis.fetch;
+  const dir = await mkdtemp(path.join(tmpdir(), 'bbui-thinking-'));
+  try {
+    for (const endpoint of ['https://api.deepseek.com', 'https://custom.example/v1', 'https://deepseek.com.evil.example/v1']) {
+      for (const provider of ['deepseek', 'arbitrary-label']) {
+        for (const thinkingLevel of ['max', 'off', undefined]) {
+          const config = { provider, model: 'fixture', api: 'openai-completions', baseUrl: endpoint, reasoning: true,
+            thinkingLevels: ['off', 'low', 'high', 'max'].map(id => ({ id, label: id })), thinkingLevel };
+          // Redirect only after all production request transforms; never contact a live API.
+          globalThis.fetch = reasoningFetch(budgetedFetch((input, init) => originalFetch(`${local}${new URL(input instanceof Request ? input.url : input).pathname}`, init), endpoint), config);
+          await writeFile(path.join(dir, 'models.json'), JSON.stringify(modelConfiguration(config)));
+          const runtime = await ModelRuntime.create({ modelsPath: path.join(dir, 'models.json'), authPath: path.join(dir, 'auth.json'), refreshOnCreate: false });
+          const model = runtime.getModel(provider, 'fixture');
+          const answer = await runtime.completeSimple(model, { messages: [{ role: 'user', content: 'fixture', timestamp: 1 }] },
+            { apiKey: 'fixture', maxRetries: 0, reasoning: thinkingLevel ?? 'high' });
+          assert.equal(answer.stopReason, 'stop', answer.errorMessage);
+          const body = requests.at(-1);
+          assert.equal(body.reasoning_effort, thinkingLevel === 'max' ? 'max' : undefined);
+          assert.deepEqual(body.thinking, endpoint === 'https://api.deepseek.com' && thinkingLevel ? { type: thinkingLevel === 'off' ? 'disabled' : 'enabled' } : undefined);
+        }
+      }
+    }
+    const config = { provider: 'deepseek', model: 'unknown', baseUrl: 'https://api.deepseek.com', reasoning: true };
+    globalThis.fetch = reasoningFetch((input, init) => originalFetch(local + '/chat/completions', init), config);
+    await writeFile(path.join(dir, 'models.json'), JSON.stringify(modelConfiguration(config)));
+    const runtime = await ModelRuntime.create({ modelsPath: path.join(dir, 'models.json'), authPath: path.join(dir, 'auth.json'), refreshOnCreate: false });
+    const answer = await runtime.completeSimple(runtime.getModel('deepseek', 'unknown'), { messages: [{ role: 'user', content: 'fixture', timestamp: 1 }] }, { apiKey: 'fixture', reasoning: 'medium', maxRetries: 0 });
+    assert.equal(answer.stopReason, 'stop', answer.errorMessage);
+    assert.equal(requests.at(-1).thinking, undefined);
+    assert.equal(requests.at(-1).reasoning_effort, undefined);
+    for (const endpoint of ['https://open.bigmodel.cn/api/paas/v4', 'https://api.moonshot.cn/v1']) {
+      for (const thinkingLevel of ['high', undefined]) {
+        const config = { provider: 'arbitrary-label', model: 'fixture', baseUrl: endpoint, reasoning: true,
+          thinkingLevels: [{ id: 'high', label: 'high' }], thinkingLevel };
+        globalThis.fetch = reasoningFetch((input, init) => originalFetch(local + '/chat/completions', init), config);
+        await writeFile(path.join(dir, 'models.json'), JSON.stringify(modelConfiguration(config)));
+        const runtime = await ModelRuntime.create({ modelsPath: path.join(dir, 'models.json'), authPath: path.join(dir, 'auth.json'), refreshOnCreate: false });
+        const answer = await runtime.completeSimple(runtime.getModel('arbitrary-label', 'fixture'), { messages: [{ role: 'user', content: 'fixture', timestamp: 1 }] }, { apiKey: 'fixture', reasoning: 'high', maxRetries: 0 });
+        assert.equal(answer.stopReason, 'stop', answer.errorMessage);
+        assert.equal(requests.at(-1).reasoning_effort, undefined, 'pinned GLM/Kimi adapter does not send effort');
+        assert.deepEqual(requests.at(-1).thinking, endpoint.includes('bigmodel.cn') && thinkingLevel ? { type: 'enabled', clear_thinking: false } : undefined);
+      }
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
+  }
+});
+
+test('default request normalization is scoped and the final body remains budget guarded', async () => {
+  const config = { api: 'anthropic-messages', model: 'fixture', baseUrl: 'https://api.anthropic.com' };
+  const bodies = [];
+  const send = reasoningFetch(async (_input, init) => { bodies.push(JSON.parse(init.body)); return new Response('{}'); }, config);
+  const body = { model: 'fixture', thinking: { type: 'adaptive' }, output_config: { effort: 'high', format: 'json' },
+    messages: [{ role: 'assistant', content: 'fixture', reasoning_content: 'preserve history' }] };
+  await send('https://api.anthropic.com/v1/messages', { method: 'POST', body: JSON.stringify(body) });
+  assert.equal(bodies[0].thinking, undefined);
+  assert.deepEqual(bodies[0].output_config, { format: 'json' });
+  assert.deepEqual(bodies[0].messages, body.messages);
+  await send('https://api.anthropic.com/search', { method: 'POST', body: JSON.stringify(body) });
+  assert.deepEqual(bodies[1], body);
+  await send('https://api.anthropic.com/v1/messages', { method: 'POST', body: JSON.stringify({ ...body, model: 'other' }) });
+  assert.equal(bodies[2].thinking.type, 'adaptive');
+  let calls = 0;
+  const request = reasoningFetch(budgetedFetch(async () => { calls++; return new Response('{}'); }, 'https://api.deepseek.com', 35),
+    { api: 'openai-completions', model: 'f', baseUrl: 'https://api.deepseek.com', thinkingLevel: 'max' });
+  const result = await request('https://api.deepseek.com/chat/completions', { method: 'POST', body: JSON.stringify({ model: 'f' }) });
+  assert.equal(result.status, 413); assert.equal(calls, 0);
 });
 
 test('connection probe exercises all three Pi adapters with only fixed synthetic inputs', async () => {

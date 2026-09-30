@@ -16,10 +16,10 @@ test('saved model capabilities override every provider and known model name', ()
   }
 });
 
-test('session controls use common protocol levels unless endpoint metadata limits them', () => {
+test('session controls use only explicitly enumerated model levels', () => {
   const missing = modelConfiguration({ reasoning: true }).providers.bbui.models[0];
-  assert.deepEqual(getSupportedThinkingLevels(missing), ['off', 'minimal', 'low', 'medium', 'high']);
-  assert.equal(missing.thinkingLevelMap.off, undefined, 'off uses adapter encoding rather than a literal invalid effort');
+  assert.deepEqual(getSupportedThinkingLevels(missing), []);
+  assert.equal(missing.thinkingLevelMap.off, null);
   const explicit = modelConfiguration({ reasoning: true, thinkingLevels: [{ id: 'high', label: 'high' }] }).providers.bbui.models[0];
   assert.deepEqual(getSupportedThinkingLevels(explicit), ['high']);
 });
@@ -54,7 +54,7 @@ test('explicit protocol selects the adapter even for a built-in provider and mod
     assert.equal(definition.api, api);
     assert.equal(definition.models[0].reasoning, false);
     assert.equal(definition.models[0].contextWindow, 128000);
-    assert.equal(definition.models[0].compat, undefined);
+    assert.equal(definition.models[0].compat?.thinkingFormat, api === 'openai-completions' ? 'openai' : undefined);
     assert.equal(modelConfiguration({ provider: 'custom', model: 'vision', api }).providers.custom.api, api);
   }
   assert.throws(() => modelConfiguration({ api: 'guess-protocol' }), /不支持的 API/);
@@ -71,5 +71,25 @@ test('explicit adaptive thinking metadata selects the wire format without model-
   for (const api of SUPPORTED_APIS) {
     const model = modelConfiguration({ api, provider: 'arbitrary', model: 'arbitrary', reasoning: true, thinkingMode: 'adaptive' }).providers.arbitrary.models[0];
     assert.equal(model.compat?.forceAdaptiveThinking, api === 'anthropic-messages' ? true : undefined);
+  }
+});
+
+test('turning reasoning off preserves discovered default metadata without blocking the model', () => {
+  const config = { reasoning: false, thinkingLevels: [{ id: 'high', label: 'high' }], defaultThinkingLevel: 'high' };
+  assert.equal(modelConfiguration(config).providers.bbui.models[0].reasoning, false);
+});
+
+test('wire formats follow verified endpoint hosts and never provider labels', () => {
+  for (const provider of ['deepseek', 'zai', 'openrouter', 'arbitrary']) {
+    for (const [baseUrl, thinkingFormat, supportsReasoningEffort] of [
+      ['https://open.bigmodel.cn/api/paas/v4', 'zai', false],
+      ['https://api.moonshot.cn/v1', 'openai', false],
+      ['https://opencode.ai/zen/go/v1', 'openai', true],
+      ['https://dashscope.aliyuncs.com/compatible-mode/v1', 'openai', true],
+      ['https://custom.example/v1', 'openai', true],
+    ]) {
+      const compat = modelConfiguration({ provider, baseUrl }).providers[provider].models[0].compat;
+      assert.equal(compat.thinkingFormat, thinkingFormat); assert.equal(compat.supportsReasoningEffort, supportsReasoningEffort);
+    }
   }
 });

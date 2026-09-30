@@ -94,6 +94,7 @@ await copyFile(path.join(root, 'pi/android/model-probe.mjs'), path.join(stage, '
 await copyFile(path.join(root, 'pi/android/rpc-timing.mjs'), path.join(stage, 'rpc-timing.mjs'));
 await copyFile(path.join(root, 'pi/android/display-projection.mjs'), path.join(stage, 'display-projection.mjs'));
 await copyFile(path.join(root, 'pi/android/request-budget.mjs'), path.join(stage, 'request-budget.mjs'));
+await copyFile(path.join(root, 'pi/android/reasoning-request.mjs'), path.join(stage, 'reasoning-request.mjs'));
 run(process.env.BBUI_PYTHON_HOST || 'python', ['-c', `
 import pathlib,sys,zipfile
 root,output=map(pathlib.Path,sys.argv[1:])

@@ -6,7 +6,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { PhoneBridge } from '../pi/bridge.ts';
 import { PiProcess } from './rpc.mjs';
-import { atomicJson, readJson, restoreState, bindSubmission, validateAnswer, deviceIdentity } from './state.mjs';
+import { atomicJson, readJson, restoreState, bindSubmission, validateAnswer, deviceIdentity, normalizeModelSelection } from './state.mjs';
 import { projectMessages } from './projection.mjs';
 import { thinkingLevels, validateModelSettings } from '../pi/android/runtime-config.mjs';
 
@@ -144,7 +144,7 @@ export class DesktopHost extends EventEmitter {
         queued: this.state.queue.filter(q => q.sessionId === s.id).length, state: '' })),
       queue: this.state.queue.map(({ id, sessionId, text }) => ({ id, sessionId, text })), queuePaused: this.state.paused,
       queuePauseReasons: this.state.paused ? ['队列已暂停'] : [], interruptedTasks: this.state.interrupted.filter(t => t.sessionId === id),
-      viewState: this.state.views[id] || { text: '', scrollTop: 0 }, modelSelection: this.state.selections[id] || this.settings.defaultModel,
+      viewState: this.state.views[id] || { text: '', scrollTop: 0 }, modelSelection: normalizeModelSelection(this.state.selections[id] || this.settings.defaultModel, this.settings),
       modelOptions: this.settings.connections.flatMap(c => (c.models || []).map(m => ({
         connectionId: c.id, connectionName: c.name, modelId: m.id, modelName: m.name || m.id,
         thinkingLevels: thinkingLevels(m), defaultThinkingLevel: m.defaultThinkingLevel || '',
@@ -527,7 +527,7 @@ export class DesktopHost extends EventEmitter {
       } });
       if (epoch !== this.stopEpoch || this.closing || this.control.mode !== 'running' || this.state.paused) { await this.finishRun(true); return; }
       this.agent = new PiProcess(this.platform, { ...connection, ...model, model: model.id, platform: 'desktop',
-        thinkingLevel: task.selection.thinkingLevel || undefined, sessionId: task.sessionId,
+        thinkingLevel: normalizeModelSelection(task.selection, settings).thinkingLevel || undefined, sessionId: task.sessionId,
         bridgeUrl: this.bridgeUrl, bridgeToken: this.agentToken, tools: settings.tools, deviceCapabilities: this.deviceCapabilities,
         memoryDir: path.join(this.data, 'memory') }, this.home);
       this.finished = new Promise(resolve => { this.finishResolve = resolve; });

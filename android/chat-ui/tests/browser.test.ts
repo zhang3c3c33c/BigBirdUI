@@ -383,7 +383,7 @@ test('bundled UI renders streaming content, preserves expansion and reading posi
     assert.equal(await page.getByRole('button', { name: '交给 AI 继续', exact: true }).count(), 0);
     assert.equal(await page.locator('.stop-action').first().isVisible(), true);
     const modelOptions: NonNullable<Snapshot['modelOptions']> = [
-      { connectionId: 'official', connectionName: '官方', modelId: 'reasoner', modelName: 'Reasoner', thinkingLevels: [{ id: 'off', label: '关闭' }, { id: 'high', label: '高' }], defaultThinkingLevel: 'high' },
+      { connectionId: 'official', connectionName: '官方', modelId: 'reasoner', modelName: 'Reasoner', thinkingLevels: [{ id: 'off', label: '关闭' }, { id: 'high', label: '高' }, { id: 'max', label: 'max' }], defaultThinkingLevel: 'high' },
       { connectionId: 'company', connectionName: '公司', modelId: 'reasoner', modelName: 'Reasoner', thinkingLevels: [], defaultThinkingLevel: '' },
       { connectionId: 'company', connectionName: 'Company', modelId: 'fast', modelName: 'Fast', thinkingLevels: [{ id: 'enabled', label: '开启' }, { id: 'disabled', label: '关闭' }], defaultThinkingLevel: 'enabled' },
     ];
@@ -392,8 +392,8 @@ test('bundled UI renders streaming content, preserves expansion and reading posi
     await publish(page, selectionSnapshot);
     await page.getByRole('button', { name: '选择模型：Reasoner · 官方', exact: true }).waitFor();
     await page.getByRole('textbox', { name: '消息', exact: true }).fill('保留模型选择时的草稿');
-    await page.getByRole('button', { name: '思考：high' }).click();
-    await page.getByRole('dialog', { name: '思考档位' }).getByRole('button', { name: 'off', exact: true }).click();
+    await page.getByRole('button', { name: '思考：高' }).click();
+    await page.getByRole('dialog', { name: '思考档位' }).getByRole('button', { name: '关闭', exact: true }).click();
     const selectedCommand = () => page.evaluate(() => (window as unknown as { commands: Array<{ type: string; sessionId: string; requestId: string; thinkingLevel?: string; connectionId?: string; modelId?: string }> }).commands.filter(c => c.type === 'selectModel' || c.type === 'setThinkingLevel').slice(-1)[0]!);
     const thinkingCommand = await selectedCommand();
     assert.equal(thinkingCommand.thinkingLevel, 'off');
@@ -402,7 +402,7 @@ test('bundled UI renders streaming content, preserves expansion and reading posi
     assert.equal(await page.getByRole('button', { name: '发送消息' }).isDisabled(), true, 'stream updates are not selection acknowledgements');
     const thinkingAck = { id: thinkingCommand.requestId, sessionId: state.sessionId, accepted: true };
     await publish(page, { ...selectionSnapshot, revision: 132, modelSelection: { ...selectionSnapshot.modelSelection!, thinkingLevel: 'off' }, modelSelectionResult: thinkingAck });
-    await page.getByRole('button', { name: '思考：off' }).waitFor();
+    await page.getByRole('button', { name: '思考：关闭' }).waitFor();
     await page.waitForFunction(() => !document.querySelector<HTMLButtonElement>('.send-button')!.disabled);
     assert.equal(await page.getByRole('textbox', { name: '消息', exact: true }).inputValue(), '保留模型选择时的草稿');
     await page.getByRole('button', { name: '选择模型：Reasoner · 官方', exact: true }).click();
@@ -435,13 +435,24 @@ test('bundled UI renders streaming content, preserves expansion and reading posi
     await page.getByRole('button', { name: '选择模型：Reasoner · 官方', exact: true }).waitFor();
     await page.waitForFunction(() => document.querySelector<HTMLTextAreaElement>('textarea')!.value === 'A 草稿');
     await page.screenshot({ path: 'test-results/browser-model-composer.png' });
-    await page.getByRole('button', { name: '思考：high' }).click();
-    await page.getByRole('dialog', { name: '思考档位' }).getByRole('button', { name: 'default', exact: true }).click();
+    await page.getByRole('button', { name: '思考：高' }).click();
+    await page.getByRole('dialog', { name: '思考档位' }).getByRole('button', { name: '默认', exact: true }).click();
     const inherited = await selectedCommand();
     assert.equal(inherited.thinkingLevel, '');
     await publish(page, { ...selectionSnapshot, revision: 138, modelSelection: { ...selectionSnapshot.modelSelection!, thinkingLevel: '' },
       modelSelectionResult: { id: inherited.requestId, sessionId: state.sessionId, accepted: true } });
-    await page.getByRole('button', { name: '思考：default' }).waitFor();
+    await page.getByRole('button', { name: '思考：默认' }).waitFor();
+    await publish(page, { ...selectionSnapshot, revision: 138.1, modelSelection: { ...selectionSnapshot.modelSelection!, thinkingLevel: 'medium' } });
+    await page.getByRole('button', { name: '思考：默认' }).click();
+    const thinkingPanel = page.getByRole('dialog', { name: '思考档位' });
+    assert.equal(await thinkingPanel.getByRole('button', { name: '默认', exact: true }).getAttribute('aria-pressed'), 'true');
+    assert.equal(await thinkingPanel.getByRole('button', { name: 'medium', exact: true }).count(), 0);
+    await thinkingPanel.getByRole('button', { name: 'max', exact: true }).click();
+    const maxChoice = await selectedCommand();
+    assert.equal(maxChoice.thinkingLevel, 'max', 'the menu sends max unchanged');
+    await publish(page, { ...selectionSnapshot, revision: 138.2, modelSelection: { ...selectionSnapshot.modelSelection!, thinkingLevel: 'max' },
+      modelSelectionResult: { id: maxChoice.requestId, sessionId: state.sessionId, accepted: true } });
+    await page.getByRole('button', { name: '思考：max' }).waitFor();
     const queuedControls: Snapshot = { ...state, revision: 139, stateId: 'selection-store', isRunning: true,
       runId: 'queue-run-one', runningSessionId: state.sessionId,
       control: { id: 'queue-control-one', mode: 'running', sessionId: state.sessionId, canResume: false, canSteer: true },

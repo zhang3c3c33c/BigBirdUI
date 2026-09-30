@@ -2,7 +2,7 @@ import path from 'node:path';
 import { APP_NAME, configureAppIdentity } from '../desktop/branding.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bindSubmission, restoreState, validateAnswer } from '../desktop/state.mjs';
+import { bindSubmission, restoreState, validateAnswer, normalizeModelSelection } from '../desktop/state.mjs';
 import { projectMessages } from '../desktop/projection.mjs';
 import { semanticKey } from '../desktop/platform.mjs';
 
@@ -29,6 +29,24 @@ test('question rejects stale runs, duplicates, invalid labels and incomplete ans
   assert.throws(() => validateAnswer(q, { ...command, runId: 'old' }));
   assert.throws(() => validateAnswer({ ...q, status: 'answered' }, command));
   assert.throws(() => validateAnswer(q, { ...command, answers: [{ questionId: 'q1', selected: ['未知'], text: '' }] }));
+});
+
+test('old generic thinking choices fall back to API default while declared choices and task revisions survive', () => {
+  const settings = { revision: 'latest', connections: [{ id: 'c', baseUrl: 'https://fixture.invalid', apiKey: 'secret', models: [
+    { id: 'deepseek', reasoning: true, thinkingLevels: [{ id: 'off' }, { id: 'low' }, { id: 'high' }, { id: 'max' }], defaultThinkingLevel: 'high' },
+    { id: 'unknown', reasoning: true },
+  ] }] };
+  const stale = { connectionId: 'c', modelId: 'deepseek', thinkingLevel: 'medium' };
+  const state = restoreState({ selections: { s: stale } });
+  const task = bindSubmission(state, settings, { submissionId: 'new', sessionId: 's', text: 'new explicit task' });
+  assert.equal(task.selection.thinkingLevel, '');
+  assert.equal(task.configRevision, 'latest');
+  assert.equal(state.selections.s.thinkingLevel, 'medium', 'normalization cannot rewrite historical records');
+  assert.equal(state.paused, true, 'normalization cannot resume the queue');
+  for (const level of ['off', 'low', 'high', 'max']) assert.equal(normalizeModelSelection({ ...stale, thinkingLevel: level }, settings).thinkingLevel, level);
+  assert.equal(normalizeModelSelection({ ...stale, modelId: 'unknown', thinkingLevel: 'high' }, settings).thinkingLevel, '');
+  const archived = { ...settings, revision: 'old', connections: [{ ...settings.connections[0], models: [{ id: 'deepseek', reasoning: true }] }] };
+  assert.equal(normalizeModelSelection({ ...stale, thinkingLevel: 'max' }, archived).thinkingLevel, '', 'sealed task versions use their own capability declaration');
 });
 test('chat projection preserves facts while excluding screenshot and raw tool diagnostics', () => {
   const value = projectMessages([{ role: 'assistant', content: [{ type: 'toolCall', id: 'c', name: 'phone_action', arguments: { 意图: '查看页面', 内容: 'PRIVATE' } }] },

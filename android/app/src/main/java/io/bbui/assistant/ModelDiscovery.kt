@@ -67,7 +67,7 @@ class ModelDiscovery : Closeable {
                     val model = data.getJSONObject(index)
                     val id = model.getString("id").trim()
                     if (id.isBlank()) throw ModelDiscoveryFailure("供应商返回了无效的模型 ID")
-                    found.putIfAbsent(id, DiscoveredModel(id, model.optString("display_name").ifBlank { model.optString("name").ifBlank { id } }, ModelSettings.fromEndpoint(model)))
+                    found.putIfAbsent(id, DiscoveredModel(id, model.optString("display_name").ifBlank { model.optString("name").ifBlank { id } }, ModelSettings.fromEndpoint(model, api, baseUrl)))
                 }
                 after = if (anthropic && page.optBoolean("has_more")) {
                     page.optString("last_id").takeIf { it.isNotBlank() && cursors.add(it) }

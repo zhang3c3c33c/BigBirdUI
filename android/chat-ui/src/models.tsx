@@ -37,13 +37,15 @@ export function ModelControls({ snapshot, selection }: { snapshot: Snapshot; sel
   const repeatedName = model && options.some(item => item !== model && item.modelName === model.modelName);
   const label = model ? `${model.modelName}${repeatedName ? ` · ${model.connectionName}` : ''}` : selected ? '模型不可用' : '选择模型';
   const thinking = model?.thinkingLevels.find(level => level.id === selected?.thinkingLevel);
+  const selectedThinking = thinking?.id ?? '';
+  const thinkingLabel = (level: { id: string; label: string }) => level.id === 'off' && (!level.label || level.label === 'off') ? '关闭' : level.label || level.id;
   const groups = new Map<string, ModelOption[]>();
   for (const option of options) groups.set(option.connectionId, [...(groups.get(option.connectionId) ?? []), option]);
   const disabled = !snapshot.sessionsReady || selection.pending;
   return <>
     <div className="model-controls" aria-label="回复模型" aria-busy={selection.pending}>
       <button className="model-chip" aria-label={`选择模型：${label}`} disabled={disabled} onClick={() => setPanel('models')}><span>{label}</span><span aria-hidden="true">⌄</span></button>
-      {!!model?.thinkingLevels.length && <button className="thinking-chip" disabled={disabled} onClick={() => setPanel('thinking')}>思考：{thinking?.id || 'default'}<span aria-hidden="true">⌄</span></button>}
+      {!!model?.thinkingLevels.length && <button className="thinking-chip" disabled={disabled} onClick={() => setPanel('thinking')}>思考：{thinking ? thinkingLabel(thinking) : '默认'}<span aria-hidden="true">⌄</span></button>}
     </div>
     {selection.error && <div className="model-error" role="alert">{selection.error}</div>}
     {panel && <Panel title={panel === 'models' ? '选择模型' : '思考档位'} close={() => setPanel(null)} className="model-panel">
@@ -55,7 +57,7 @@ export function ModelControls({ snapshot, selection }: { snapshot: Snapshot; sel
           </button>)}
         </section>)}
         <button className="manage-models" onClick={() => { setPanel(null); post({ type: 'openSettings', page: 'models' }); }}>管理模型</button>
-      </> : <div className="thinking-options">{[{ id: '', label: 'default' }, ...(model?.thinkingLevels ?? [])].map(level => <button className="model-option" key={level.id} aria-pressed={level.id === selected?.thinkingLevel} disabled={disabled} onClick={() => { selection.select(level.id); setPanel(null); }}><span>{level.id || 'default'}</span><span aria-hidden="true">{level.id === selected?.thinkingLevel ? '✓' : ''}</span></button>)}</div>}
+      </> : <div className="thinking-options">{[{ id: '', label: '默认' }, ...(model?.thinkingLevels ?? [])].map(level => <button className="model-option" key={level.id} aria-pressed={level.id === selectedThinking} disabled={disabled} onClick={() => { selection.select(level.id); setPanel(null); }}><span>{thinkingLabel(level)}</span><span aria-hidden="true">{level.id === selectedThinking ? '✓' : ''}</span></button>)}</div>}
     </Panel>}
   </>;
 }

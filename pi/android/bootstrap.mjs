@@ -5,6 +5,7 @@ import { webcrypto } from 'node:crypto';
 import { Worker } from 'node:worker_threads';
 import { timedRpcWriter } from './rpc-timing.mjs';
 import { budgetedFetch } from './request-budget.mjs';
+import { reasoningFetch } from './reasoning-request.mjs';
 import { extensionManifest, desktopExtensionManifest } from './extensions-manifest.mjs';
 
 // Pi captures stdout's writer when taking ownership of RPC output. Install the
@@ -21,7 +22,9 @@ try {
   delete process.env.BBUI_BOOTSTRAP_CONFIG;
   // Consume credentials before imports/validation can fail or take time.
   await saveStartup('{}');
-  if (!config.catalogOnly) globalThis.fetch = budgetedFetch(globalThis.fetch.bind(globalThis), config.baseUrl);
+  const transportFetch = globalThis.fetch.bind(globalThis);
+  const installModelFetch = () => { globalThis.fetch = reasoningFetch(budgetedFetch(transportFetch, config.baseUrl), config); };
+  if (!config.catalogOnly) installModelFetch();
   // Keep dependency-resolution errors inside our structured, redacted channel.
   const { modelConfiguration, runtimeSettings, validateThinkingLevel } = await import('./runtime-config.mjs');
   await validateThinkingLevel(config);
@@ -109,7 +112,16 @@ try {
     ...(config.thinkingLevel ? ['--thinking', config.thinkingLevel] : []),
     '--session-dir', sessionDirectory,
     ...(sessionPath ? ['--session', sessionPath] : [])];
-  await import('./node_modules/@earendil-works/pi-coding-agent/dist/bundle/rpc-entry.js');
+  const rpcEntry = new URL('./node_modules/@earendil-works/pi-coding-agent/dist/bundle/rpc-entry.js', import.meta.url);
+  const rpcSource = await readFile(rpcEntry, 'utf8');
+  const runtimeChunk = rpcSource.match(/import\{APP_NAME,configureHttpDispatcher,main\}from"(\.\/chunks\/[^"/]+\.js)"/);
+  if (!runtimeChunk) throw new Error('Pinned Pi RPC entry changed');
+  // Pi preserves deliberate fetch overrides installed after its dispatcher
+  // module loads. Load the shared chunk without running main, then reinstall
+  // our guards so configureHttpDispatcher cannot replace them with undici.
+  await import(new URL(runtimeChunk[1], rpcEntry).href);
+  installModelFetch();
+  await import(rpcEntry.href);
 } catch (error) {
   let message = error instanceof Error ? error.message : String(error);
   for (const secret of [config.apiKey, config.bridgeToken, config.tools?.search?.apiKey]) if (secret) message = message.split(secret).join('[redacted]');

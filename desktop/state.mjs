@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { thinkingLevels } from '../pi/android/runtime-config.mjs';
 
 export async function atomicJson(file, data) {
   await mkdir(path.dirname(file), { recursive: true });
@@ -26,10 +27,17 @@ export function restoreState(saved = {}) {
     interrupted: [...(saved.interrupted || []), ...(saved.active ? [{ ...saved.active, interruptedReason: 'running' }] : []),
       ...(saved.queue || []).map(task => ({ ...task, interruptedReason: 'queued' }))] };
 }
+export function normalizeModelSelection(selection, settings) {
+  if (!selection) return selection;
+  const model = settings.connections.find(item => item.id === selection.connectionId)?.models?.find(item => item.id === selection.modelId);
+  if (!model || !selection.thinkingLevel || thinkingLevels(model).some(level => level.id === selection.thinkingLevel)) return { ...selection };
+  // Older versions offered generic levels even when the model did not declare them.
+  return { ...selection, thinkingLevel: '' };
+}
 export function bindSubmission(state, settings, command) {
   if (!command.text?.trim() || !command.submissionId || !command.sessionId) throw new Error('缺少任务内容或会话');
   if ([...state.queue, ...state.interrupted, ...(state.active ? [state.active] : [])].some(item => item.id === command.submissionId)) throw new Error('任务已经提交');
-  const selection = state.selections[command.sessionId] || settings.defaultModel;
+  const selection = normalizeModelSelection(state.selections[command.sessionId] || settings.defaultModel, settings);
   const connection = settings.connections.find(item => item.id === selection?.connectionId);
   if (!connection?.models?.some(model => model.id === selection?.modelId) || !connection.baseUrl?.trim() || !connection.apiKey?.trim()) throw new Error('请先配置模型');
   return { id: command.submissionId, sessionId: command.sessionId, text: command.text.trim(),
