@@ -11,8 +11,8 @@ android {
         applicationId = "io.bbui.assistant"
         minSdk = 30
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.1.0-preview.3"
+        versionCode = 3
+        versionName = "0.1.0-preview.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters += "arm64-v8a" }
     }

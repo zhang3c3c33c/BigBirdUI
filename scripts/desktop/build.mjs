@@ -61,7 +61,7 @@ await writeFile(path.join(app, 'README.md'), `# BigBirdUI · 大鸟手机助手
 
 使用教程：https://github.com/zhang3c3c33c/BigBirdUI#使用教程
 
-本版为预览版，Windows 程序未做代码签名。自有代码采用 MIT，第三方组件遵循各自许可证。
+自有代码采用 MIT，第三方组件遵循各自许可证。
 `);
 await writeFile(path.join(app, 'package.json'), JSON.stringify({ name: 'bbui-desktop', productName: APP_NAME, version: PRODUCT_VERSION, license: 'MIT', type: 'module', main: 'main.mjs' }));
 run(process.execPath, [path.join(root, 'android/chat-ui/node_modules/vite/bin/vite.js'), 'build'], path.join(root, 'android/chat-ui'), { ...process.env, BBUI_DESKTOP_BUILD: '1' });

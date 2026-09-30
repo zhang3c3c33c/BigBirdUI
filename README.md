@@ -19,8 +19,8 @@
 
 | 平台 | 文件 |
 | --- | --- |
-| Android 11+、arm64 | `BigBirdUI-Android-arm64-debug.apk` |
-| Windows x64 | `BigBirdUI-Windows-x64.zip` |
+| Android 11+、arm64 | [BigBirdUI-Android-arm64-debug.apk](https://github.com/zhang3c3c33c/BigBirdUI/releases/download/v0.1.0-preview.4/BigBirdUI-Android-arm64-debug.apk) |
+| Windows x64 | [BigBirdUI-Windows-x64.zip](https://github.com/zhang3c3c33c/BigBirdUI/releases/download/v0.1.0-preview.4/BigBirdUI-Windows-x64.zip) |
 
 ## 使用教程
 
