@@ -60,6 +60,11 @@ try {
   assert.equal(saved.connections[0].models[0].maxTokens, 8192);
   assert.equal(saved.connections[0].models[0].thinkingLevels, undefined);
   assert.equal(saved.connections[0].models[0].reasoning, true);
+  const legacy = structuredClone(saved);
+  legacy.connections[0].models[0].defaultThinkingLevel = '';
+  await page.evaluate(value => window.Desktop.invoke('saveSettings', value), legacy);
+  assert.equal((await page.evaluate(() => window.Desktop.invoke('settings'))).connections[0].models[0].defaultThinkingLevel, '',
+    'legacy empty default must survive the real IPC save path');
   await page.getByRole('button', { name: '完成', exact: true }).click();
   await page.getByRole('dialog', { name: '设置' }).waitFor({ state: 'hidden' });
   await page.getByRole('button', { name: '管理模型', exact: true }).click();

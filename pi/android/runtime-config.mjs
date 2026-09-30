@@ -12,7 +12,7 @@ export function validateModelSettings(model) {
   if (model.reasoning != null && typeof model.reasoning !== 'boolean') throw new Error('思考能力设置无效');
   if (model.input != null && (!Array.isArray(model.input) || !model.input.length || model.input.some(type => !['text', 'image'].includes(type)))) throw new Error('模型输入类型无效');
   if (model.thinkingLevels != null && (!Array.isArray(model.thinkingLevels) || model.thinkingLevels.some(level => !THINKING_LEVELS.includes(level?.id)))) throw new Error('思考档位设置无效');
-  if (model.defaultThinkingLevel != null && !(model.thinkingLevels ?? []).some(level => level.id === model.defaultThinkingLevel)) throw new Error('默认思考档位设置无效');
+  if (model.defaultThinkingLevel != null && model.defaultThinkingLevel !== '' && !(model.thinkingLevels ?? []).some(level => level.id === model.defaultThinkingLevel)) throw new Error('默认思考档位设置无效');
 }
 
 /** This identifies a wire protocol, not a model capability or provider label. */

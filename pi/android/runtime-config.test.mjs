@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getSupportedThinkingLevels } from '@earendil-works/pi-ai';
-import { modelConfiguration, runtimeSettings, SUPPORTED_APIS, validateThinkingLevel } from './runtime-config.mjs';
+import { modelConfiguration, runtimeSettings, SUPPORTED_APIS, validateModelSettings, validateThinkingLevel } from './runtime-config.mjs';
 
 test('saved model capabilities override every provider and known model name', () => {
   for (const provider of ['deepseek', 'openai', 'anthropic', 'bbui', 'openrouter']) {
@@ -77,6 +77,27 @@ test('explicit adaptive thinking metadata selects the wire format without model-
 test('turning reasoning off preserves discovered default metadata without blocking the model', () => {
   const config = { reasoning: false, thinkingLevels: [{ id: 'high', label: 'high' }], defaultThinkingLevel: 'high' };
   assert.equal(modelConfiguration(config).providers.bbui.models[0].reasoning, false);
+});
+
+test('empty default metadata permits saving and runtime startup without inventing a level', async () => {
+  for (const defaultThinkingLevel of ['', null, undefined]) {
+    for (const thinkingLevels of [undefined, [], [{ id: 'high', label: 'high' }]]) {
+      const config = { reasoning: true, thinkingLevels, defaultThinkingLevel, thinkingLevel: '' };
+      assert.doesNotThrow(() => validateModelSettings(config));
+      const model = modelConfiguration(config).providers.bbui.models[0];
+      assert.deepEqual(getSupportedThinkingLevels(model), thinkingLevels?.map(level => level.id) ?? []);
+      await validateThinkingLevel(config);
+      await assert.rejects(validateThinkingLevel({ ...config, thinkingLevel: 'max' }), /所选思考档位不可用/);
+    }
+  }
+});
+
+test('nonempty invalid model defaults remain rejected', () => {
+  for (const defaultThinkingLevel of ['max', 'unknown', ' ', 0, false]) {
+    const config = { reasoning: true, thinkingLevels: [{ id: 'high', label: 'high' }], defaultThinkingLevel };
+    assert.throws(() => validateModelSettings(config), /默认思考档位设置无效/);
+    assert.throws(() => modelConfiguration(config), /默认思考档位设置无效/);
+  }
 });
 
 test('wire formats follow verified endpoint hosts and never provider labels', () => {
