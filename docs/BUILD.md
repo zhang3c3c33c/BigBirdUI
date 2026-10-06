@@ -1,6 +1,6 @@
 # 构建与测试
 
-使用 Windows PowerShell，命令从仓库根目录执行。
+命令从仓库根目录执行；未注明时使用 Windows PowerShell。
 
 ## 环境
 
@@ -44,6 +44,25 @@ npm run desktop:package
 生成便携包：`.desktop/releases/BigBirdUI-Windows-x64.zip`。
 
 Windows 构建会下载并校验固定版本的 iPhone DDI，随包内置。已有文件可放入 `vendor/ios-ddi/`：`Image.dmg`、`BuildManifest.plist`、`Image.trustcache`；版本与 SHA-256 见 `bbui/ios_ddi.py`。
+
+## Linux
+
+Linux 使用主机上的 Python、Node、adb 与 scrcpy，不打包独立运行时：
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -e .
+npm ci --ignore-scripts
+npm --prefix android/chat-ui ci --ignore-scripts
+npm run desktop:build
+npm run desktop
+```
+
+- 需要 Python 3.11+（含 `uiautomator2`、`av` 等依赖）、Node 24 和 `adb`；只读镜像窗口还需要系统 `scrcpy`，也可用 `BBUI_SCRCPY` 指定其他路径。构建时可用 `BBUI_PYTHON`、`BBUI_ADB` 覆盖清单中的可执行文件。
+- iPhone 支持与随包运行时只在 Windows 构建中提供，Linux 不要安装 `.[ios]` 附加依赖。
+- 会话未运行密钥环（gnome-keyring/kwallet）时，凭据仅由用户数据目录的文件权限保护，保存设置时会提示。
+- `desktop-agent` APK 需先用 Android 工具链构建；缺失时 Android 系统级操作不可用，其他功能不受影响。
+- 冒烟验证：`node tests/desktop-exit.mjs`（需先执行 `node node_modules/electron/install.js` 下载 Electron）。
 
 ## 测试
 

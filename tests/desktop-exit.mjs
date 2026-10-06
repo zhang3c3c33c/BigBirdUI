@@ -6,7 +6,7 @@ const data = process.env.BBUI_TEST_DATA || await mkdtemp(path.resolve('runs/desk
 let previous;
 try { previous = JSON.parse(await readFile(path.join(data, 'state.json'))); } catch (error) { if (error.code !== 'ENOENT') throw error; }
 const env = { ...process.env, BBUI_DESKTOP_DATA: data }; delete env.ELECTRON_RUN_AS_NODE;
-const executable = process.argv[2] || path.resolve('node_modules/electron/dist/electron.exe');
+const executable = process.argv[2] || path.resolve('node_modules/electron/dist', process.platform === 'win32' ? 'electron.exe' : 'electron');
 const args = process.argv[2] ? ['--smoke-exit'] : [path.resolve('.desktop/app'), '--smoke-exit'];
 const child = spawn(executable, args, { env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
 child.stderr.on('data', data => process.stderr.write(data));

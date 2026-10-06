@@ -1,6 +1,7 @@
 """View-only desktop scrcpy clients, independent from model control sockets."""
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import threading
 import time
@@ -15,10 +16,17 @@ class MirrorManager:
         self.mutex = threading.RLock()
         self.job = None
 
+    def _client(self):
+        if os.environ.get('BBUI_SCRCPY'):
+            return Path(os.environ['BBUI_SCRCPY'])
+        if os.name == 'nt':
+            return self.root / 'vendor' / 'scrcpy' / 'scrcpy-win64-v4.1' / 'scrcpy.exe'
+        return Path(shutil.which('scrcpy') or 'scrcpy')
+
     def _command(self, name, display_id):
-        executable = self.root / 'vendor' / 'scrcpy' / 'scrcpy-win64-v4.1' / 'scrcpy.exe'
+        executable = self._client()
         if not executable.is_file():
-            raise RuntimeError('缺少 scrcpy 客户端，请运行 .venv\\Scripts\\python.exe scripts/install_scrcpy.py')
+            raise RuntimeError('缺少 scrcpy 客户端：Windows 运行 scripts/install_scrcpy.py，Linux 安装 scrcpy 或设置 BBUI_SCRCPY')
         return [str(executable), '--serial', self.serial, f'--display-id={display_id}',
                 '--no-control', '--no-audio', '--no-clipboard-autosync', '--no-power-on',
                 '--no-cleanup', '--force-adb-forward', '--max-fps=15', '--max-size=1280',
@@ -47,12 +55,16 @@ class MirrorManager:
             folder = self.root / 'runs' / self.serial / 'mirrors'
             folder.mkdir(parents=True, exist_ok=True)
             log = folder / f'{name}-{uuid.uuid4().hex}.log'
+            environment = {**os.environ, 'ADB': adbutils.adb_path()}
+            # The pinned Windows client ships beside its matching server; a system
+            # client on Linux resolves its own server.
+            if os.name == 'nt':
+                environment['SCRCPY_SERVER_PATH'] = str(Path(command[0]).parent / 'scrcpy-server')
             # Hide the console, not the explicitly requested SDL viewing window.
             with log.open('wb') as output:
                 process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=output,
                                            stderr=subprocess.STDOUT, cwd=str(Path(command[0]).parent),
-                                           env={**os.environ, 'ADB': adbutils.adb_path(),
-                                                'SCRCPY_SERVER_PATH': str(Path(command[0]).parent / 'scrcpy-server')},
+                                           env=environment,
                                            creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
             self.entries[name] = process, log, display_id
             try:

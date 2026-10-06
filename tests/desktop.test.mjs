@@ -1,10 +1,12 @@
 import path from 'node:path';
+import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { APP_NAME, configureAppIdentity } from '../desktop/branding.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { bindSubmission, restoreState, validateAnswer, normalizeModelSelection } from '../desktop/state.mjs';
 import { projectMessages } from '../desktop/projection.mjs';
-import { semanticKey } from '../desktop/platform.mjs';
+import { semanticKey, linuxPlatform } from '../desktop/platform.mjs';
 
 test('restart preserves interrupted work without automatically replaying the queue', () => {
   const state = restoreState({ active: { id: 'a' }, queue: [{ id: 'b' }], questions: [{ status: 'pending' }], views: { a: { text: '草稿', scrollTop: 21 } } });
@@ -61,6 +63,23 @@ test('keyboard mapping emits Android semantics', () => {
   assert.equal(semanticKey('Backspace', false).params.键名, '删除');
   assert.equal(semanticKey('Delete', false).params.键名, '向前删除');
   for (const [key, name] of [['ArrowLeft', '左'], ['ArrowRight', '右'], ['ArrowUp', '上'], ['ArrowDown', '下']]) assert.equal(semanticKey(key, false).params.键名, name);
+});
+
+test('linux resources keep staged paths, host PATH names and per-user device state', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'bbui-linux-'));
+  await mkdir(path.join(root, 'source'), { recursive: true });
+  await writeFile(path.join(root, 'runtime-manifest.json'), JSON.stringify({ platform: process.platform, arch: process.arch,
+    paths: { node: 'node/node', python: 'python3', pythonSource: 'source', assets: 'assets', adb: '/opt/android/adb' } }));
+  const app = { getPath: () => '/fixture/data' };
+  const platform = await linuxPlatform(app, { isEncryptionAvailable: () => false }, root);
+  assert.equal(platform.resource('pythonSource'), path.join(root, 'source'), 'staged relative paths stay inside the app');
+  assert.equal(platform.resource('assets'), path.join(root, 'assets'));
+  assert.equal(platform.resource('python'), 'python3', 'unstaged bare names resolve from the host PATH');
+  assert.equal(platform.resource('adb'), '/opt/android/adb');
+  assert.ok(platform.resource('deviceState').endsWith(path.join('BBUI', 'devices')));
+  const sealed = await platform.seal({ apiKey: 'SECRET' });
+  assert.ok(!sealed.includes('SECRET')); assert.equal(sealed.slice(0, 6), 'plain:', 'no keyring falls back to the marked file encoding');
+  assert.deepEqual(platform.unseal(sealed), { apiKey: 'SECRET' });
 });
 
 for (const override of [undefined, path.resolve('runs/custom profile')]) {

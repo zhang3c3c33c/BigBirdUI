@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, safeStorage, dialog, shell, Menu } from 'e
 import { fileURLToPath } from 'node:url';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import { windowsPlatform } from './platform.mjs';
+import { windowsPlatform, linuxPlatform } from './platform.mjs';
 import { DesktopHost } from './host.mjs';
 import { PiProcess } from './rpc.mjs';
 import { discoverDevices } from './devices.mjs';
@@ -13,7 +13,7 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 configureAppIdentity(app);
 if (!app.requestSingleInstanceLock()) app.quit();
 else app.whenReady().then(async () => {
-  const platform = await windowsPlatform(app, safeStorage, root);
+  const platform = process.platform === 'win32' ? await windowsPlatform(app, safeStorage, root) : await linuxPlatform(app, safeStorage, root);
   const releaseSupervisor = await platform.supervise();
   const host = new DesktopHost(platform);
   let window, stopWindow, exiting = false;

@@ -12,7 +12,7 @@ const server = createServer((request, response) => {
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const data = process.env.BBUI_TEST_DATA || await mkdtemp(path.resolve('runs/desktop-window-'));
 const env = { ...process.env, BBUI_DESKTOP_DATA: data }; delete env.ELECTRON_RUN_AS_NODE;
-const application = await electron.launch({ executablePath: process.argv[2] || path.resolve('node_modules/electron/dist/electron.exe'), args: process.argv[2] ? [] : [path.resolve('.desktop/app')], env, timeout: 30000 });
+const application = await electron.launch({ executablePath: process.argv[2] || path.resolve('node_modules/electron/dist', process.platform === 'win32' ? 'electron.exe' : 'electron'), args: process.argv[2] ? [] : [path.resolve('.desktop/app')], env, timeout: 30000 });
 const mainPid = await application.evaluate(() => process.pid);
 application.process().stderr.on('data', data => console.error(String(data)));
 application.on('console', message => console.log('Electron:', message.text()));
